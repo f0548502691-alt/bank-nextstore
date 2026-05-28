@@ -16,11 +16,11 @@ export class BankBalancesApiService {
   private readonly baseUrl = `${environment.apiBaseUrl}/bank-balances`;
   private readonly responseCache = new Map<string, CacheEntry<unknown>>();
 
-  getBalances(filters: BankBalanceFilterForm): Observable<BankBalanceListResponse> {
+  getBalances(filters: BankBalanceFilterForm, options: RequestCacheOptions = {}): Observable<BankBalanceListResponse> {
     const params = this.toParams(filters);
     const cacheKey = `${this.baseUrl}?${params.toString()}`;
-    const cached = this.getFromCache<BankBalanceListResponse>(cacheKey);
-    if (cached) {
+    const cached = options.bypassCache ? null : this.getFromCache<BankBalanceListResponse>(cacheKey);
+    if (cached !== null) {
       return of(cached);
     }
 
@@ -29,10 +29,10 @@ export class BankBalancesApiService {
     );
   }
 
-  getFilterOptions(): Observable<BankBalanceFilterOptions> {
+  getFilterOptions(options: RequestCacheOptions = {}): Observable<BankBalanceFilterOptions> {
     const url = `${this.baseUrl}/filters`;
-    const cached = this.getFromCache<BankBalanceFilterOptions>(url);
-    if (cached) {
+    const cached = options.bypassCache ? null : this.getFromCache<BankBalanceFilterOptions>(url);
+    if (cached !== null) {
       return of(cached);
     }
 
@@ -88,6 +88,10 @@ export class BankBalancesApiService {
       expiresAt: Date.now() + this.cacheTtlMs,
     });
   }
+}
+
+interface RequestCacheOptions {
+  bypassCache?: boolean;
 }
 
 interface CacheEntry<T> {

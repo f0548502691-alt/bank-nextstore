@@ -77,7 +77,7 @@ export class App implements OnInit, OnDestroy {
     this.clearSearchDebounce();
   }
 
-  protected loadBalances(): void {
+  protected loadBalances(bypassCache = false): void {
     const requestId = ++this.requestSequence;
     this.loading.set(true);
     this.error.set(null);
@@ -85,7 +85,7 @@ export class App implements OnInit, OnDestroy {
     this.filterModel.pageSize = this.pageSize();
 
     this.bankBalancesApi
-      .getBalances(this.filterModel)
+      .getBalances(this.filterModel, { bypassCache })
       .pipe(finalize(() => {
         if (requestId === this.requestSequence) {
           this.loading.set(false);
@@ -127,6 +127,13 @@ export class App implements OnInit, OnDestroy {
     this.searchPending.set(false);
     this.page.set(1);
     this.loadBalances();
+  }
+
+  protected refreshData(): void {
+    this.clearSearchDebounce();
+    this.searchPending.set(false);
+    this.loadFilterOptions(true);
+    this.loadBalances(true);
   }
 
   protected scheduleSearch(search: string): void {
@@ -173,8 +180,8 @@ export class App implements OnInit, OnDestroy {
     this.loadBalances();
   }
 
-  private loadFilterOptions(): void {
-    this.bankBalancesApi.getFilterOptions().subscribe({
+  private loadFilterOptions(bypassCache = false): void {
+    this.bankBalancesApi.getFilterOptions({ bypassCache }).subscribe({
       next: (options) => this.filterOptions.set(options),
       error: (error: unknown) =>
         this.error.set(error instanceof Error ? error.message : 'לא ניתן לטעון את אפשרויות הסינון.'),
