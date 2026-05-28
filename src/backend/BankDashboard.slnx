@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="BankDashboard.Api/BankDashboard.Api.csproj" />
+  <Project Path="BankDashboard.Application.Tests/BankDashboard.Application.Tests.csproj" />
+  <Project Path="BankDashboard.Application/BankDashboard.Application.csproj" />
+  <Project Path="BankDashboard.Domain/BankDashboard.Domain.csproj" />
+  <Project Path="BankDashboard.Infrastructure/BankDashboard.Infrastructure.csproj" />
+</Solution>

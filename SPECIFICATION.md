@@ -12,7 +12,7 @@
 - טעינת נתוני דמו מקובץ JSON.
 - הצגת יתרות בנק בטבלת Dashboard נוחה לקריאה.
 - חיפוש חופשי לפי שדות מרכזיים.
-- סינון לפי מאפיינים עסקיים כגון בנק, מטבע, סוג חשבון וטווח יתרות.
+- סינון לפי מאפיינים עסקיים כגון בנק, מטבע, סוג יתרה, סטטוס וטווח סכומים.
 - הפרדה ברורה בין Backend, Frontend ושכבות פנימיות.
 - שימוש ב-Clean Architecture ובתבניות נפוצות כגון CQRS ו-MediatR.
 - מחשבה על איכות קוד, חוויית משתמש וחוויית פיתוח.
@@ -50,34 +50,30 @@
 
 מקור הנתונים יהיה קובץ JSON שיצורף לפרויקט. אם מבנה הקובץ בפועל שונה, האפיון יעודכן בהתאם.
 
-מבנה צפוי לרשומת יתרת בנק:
+מבנה רשומת יתרת בנק בקובץ `bank_balances_demo_5000.json`:
 
 ```json
 {
-  "id": "acc-001",
-  "bankName": "Bank Leumi",
-  "branchNumber": "001",
-  "accountNumber": "123456",
-  "accountHolderName": "Demo Company Ltd",
-  "accountType": "Business",
+  "id": 1,
+  "date": "08/01/2025",
+  "bankName": "דיסקונט",
+  "accountNumber": "237167",
+  "balanceType": "יתרת עו\"ש",
   "currency": "ILS",
-  "currentBalance": 125000.5,
-  "availableBalance": 110000.0,
-  "lastUpdated": "2026-05-28T07:00:00Z"
+  "amount": 245571.18,
+  "status": "פעיל"
 }
 ```
 
 שדות להצגה בטבלה:
 
+- תאריך
 - שם בנק
-- מספר סניף
 - מספר חשבון
-- בעל החשבון
-- סוג חשבון
+- סוג יתרה
 - מטבע
-- יתרה נוכחית
-- יתרה זמינה
-- תאריך עדכון אחרון
+- סכום
+- סטטוס
 
 ## יכולות משתמש
 
@@ -102,9 +98,9 @@
 
 - שם בנק
 - מספר חשבון
-- שם בעל החשבון
+- סוג יתרה
 - מטבע
-- סוג חשבון
+- סטטוס
 
 החיפוש יהיה case-insensitive בצד השרת כדי לשמור על מקור אמת יחיד להתנהגות.
 
@@ -114,15 +110,16 @@
 
 - בנק
 - מטבע
-- סוג חשבון
-- יתרה מינימלית
-- יתרה מקסימלית
+- סוג יתרה
+- סטטוס
+- סכום מינימלי
+- סכום מקסימלי
 
 ### מיון
 
 בשלב ראשון:
 
-- מיון ברירת מחדל לפי `lastUpdated` בסדר יורד.
+- מיון ברירת מחדל לפי `date` בסדר יורד ולאחר מכן `id` בסדר יורד.
 
 הרחבה אפשרית:
 
@@ -206,9 +203,10 @@ GET /api/bank-balances/filters
 - `search`
 - `bankName`
 - `currency`
-- `accountType`
-- `minBalance`
-- `maxBalance`
+- `balanceType`
+- `status`
+- `minAmount`
+- `maxAmount`
 
 ## MediatR ו-CQRS
 
@@ -320,7 +318,7 @@ features/dashboard/
 ### Get balances
 
 ```http
-GET /api/bank-balances?search=demo&currency=ILS&minBalance=0
+GET /api/bank-balances?search=דיסקונט&currency=ILS&minAmount=0
 ```
 
 Response:
@@ -329,19 +327,25 @@ Response:
 {
   "items": [
     {
-      "id": "acc-001",
-      "bankName": "Bank Leumi",
-      "branchNumber": "001",
-      "accountNumber": "123456",
-      "accountHolderName": "Demo Company Ltd",
-      "accountType": "Business",
+      "id": 1,
+      "date": "2025-01-08",
+      "bankName": "דיסקונט",
+      "accountNumber": "237167",
+      "balanceType": "יתרת עו\"ש",
       "currency": "ILS",
-      "currentBalance": 125000.5,
-      "availableBalance": 110000,
-      "lastUpdated": "2026-05-28T07:00:00Z"
+      "amount": 245571.18,
+      "status": "פעיל"
     }
   ],
-  "totalCount": 1
+  "totalCount": 1,
+  "summary": {
+    "totalCount": 1,
+    "bankCount": 1,
+    "latestDate": "2025-01-08",
+    "totalAmountByCurrency": {
+      "ILS": 245571.18
+    }
+  }
 }
 ```
 
@@ -355,9 +359,10 @@ Response:
 
 ```json
 {
-  "banks": ["Bank Leumi", "Bank Hapoalim"],
+  "banks": ["דיסקונט", "פועלים"],
   "currencies": ["ILS", "USD", "EUR"],
-  "accountTypes": ["Business", "Checking", "Savings"]
+  "balanceTypes": ["יתרת עו\"ש", "מניות"],
+  "statuses": ["פעיל", "לא פעיל", "חסום"]
 }
 ```
 
@@ -368,7 +373,7 @@ Response:
 - Unit tests ל-Application query handler:
   - חיפוש.
   - סינון לפי מטבע.
-  - סינון לפי טווח יתרות.
+  - סינון לפי סטטוס וטווח סכומים.
   - שילוב כמה סינונים.
 - Unit tests לטעינת JSON תקין.
 - בדיקות ידניות ל-Frontend:
@@ -377,16 +382,14 @@ Response:
   - שגיאת API.
   - responsive layout בסיסי.
 
-## הוראות הרצה מתוכננות
-
-הוראות אלה יעודכנו לאחר יצירת הפרויקטים בפועל.
+## הוראות הרצה
 
 ### Backend
 
 ```bash
 cd src/backend
 dotnet restore
-dotnet run --project BankDashboard.Api
+dotnet run --project BankDashboard.Api --urls http://localhost:5000
 ```
 
 ### Frontend
@@ -402,6 +405,49 @@ npm start
 - API: `https://localhost:7001` או `http://localhost:5000`
 - Frontend: `http://localhost:4200`
 - OpenAPI: `/swagger` או endpoint OpenAPI מקביל בהתאם להגדרת .NET 10
+
+### Docker Compose
+
+```bash
+docker compose up --build
+```
+
+- Frontend: `http://localhost:4200`
+- Backend API: `http://localhost:5000/api/bank-balances`
+
+ה-Frontend נבנה כקבצים סטטיים ומוגש על ידי Nginx. קריאות `/api` עוברות מ-Nginx לשירות ה-backend בתוך רשת ה-Compose.
+
+## החלטות מימוש ויכולת הרחבה
+
+### ריבוי קריאות במקביל
+
+- ה-API stateless ברמת request.
+- `JsonBankBalanceReadRepository` רשום כ-Singleton וטוען את קובץ ה-JSON דרך `Lazy<Task<IReadOnlyList<BankBalance>>>`.
+- אם כמה קריאות מגיעות יחד לפני סיום הטעינה הראשונה, כולן ממתינות לאותה משימת טעינה במקום לבצע קריאות דיסק כפולות.
+- לאחר הטעינה, הקריאות עובדות מול רשימה immutable בפועל, והסינון מתבצע בזיכרון לכל request.
+
+### ביצועי קריאת הקובץ
+
+קובץ של 5,000 רשומות הוא קטן יחסית. הקריאה האיטית ביותר היא הטעינה הראשונה מהדיסק וה-deserialization, ולאחר מכן אין קריאה חוזרת לקובץ. אם כמות הנתונים תגדל משמעותית, נקודות ההרחבה הטבעיות הן pagination, מעבר ל-DB, cache מנוהל או טעינה ברקע.
+
+### Factory
+
+בשלב הנוכחי אין צורך ב-Factory: קיימת תשתית אחת ברורה לקריאת נתונים, וה-DI מחבר abstraction ל-implementation. Factory יהיה מוצדק אם יתווספו כמה מקורות נתונים, בחירה דינמית לפי tenant, קבצים שונים לפי סביבה, או אסטרטגיות parsing שונות.
+
+### שימוש בפיצ'רים חדשים
+
+- Angular: standalone component, `inject`, Signals, `computed`, control flow חדש עם `@if` / `@for`, ו-`provideHttpClient`.
+- .NET: target ל-`.NET 10`, minimal hosting model, records immutable, primary constructors, `DateOnly`, async APIs ו-DI מובנה.
+
+### הפרדה בין שכבות וצימוד
+
+- `Domain` מכיל מודל עסקי נקי ללא תלות בתשתיות.
+- `Application` מכיל DTOs, queries, handlers ו-abstractions.
+- `Infrastructure` מממש את הקריאה מה-JSON דרך abstraction של Application.
+- `Api` מכיר את Application ו-Infrastructure לצורך composition root בלבד.
+- Frontend מבודד את חוזה ה-API ב-service וב-models.
+
+הצימוד המרכזי שנותר הוא חוזה ה-DTO בין API ל-Frontend ושמות שדות ה-JSON בתוך ה-repository. זה צימוד סביר לשלב הדמו, וניתן להרחבה באמצעות mapping/versioning אם החוזה יהפוך ציבורי או יציב לאורך זמן.
 
 ## שימוש ב-AI במהלך הפיתוח
 
@@ -419,13 +465,14 @@ npm start
 
 ## החלטות פתוחות
 
-- התאמת שמות שדות למבנה המדויק של קובץ ה-JSON שיצורף.
-- בחירה בין Controllers לבין Minimal APIs ב-.NET 10.
-- בחירה בין CSS פשוט, SCSS או ספריית UI קלה ל-Angular.
-- האם לבצע סינון בצד שרת בלבד או לשלב סינון client-side לאחר טעינה ראשונית.
+- האם להוסיף pagination בצד שרת כאשר כמות הנתונים תגדל.
+- האם להוסיף sorting דינמי לפי עמודות.
+- האם להעביר את כתובת ה-API ב-Frontend לקובץ environment/config במקום proxy יחסי.
 
 ## יומן שינויים
 
 | תאריך | שינוי | סיבה |
 | --- | --- | --- |
 | 2026-05-28 | יצירת אפיון ראשוני | תכנון Dashboard ליתרות בנק לפי דרישות המטלה, כולל Clean Architecture, MediatR, Angular 20 ו-.NET 10 |
+| 2026-05-28 | תחילת מימוש Backend ו-Frontend לפי קובץ JSON בפועל | התאמת האפיון לשדות `date`, `balanceType`, `amount`, `status`; הוספת API, repository, queries, בדיקות יחידה ראשוניות ומסך Dashboard |
+| 2026-05-28 | הוספת Docker ותיעוד החלטות הרחבה | תמיכה בהרצה מלאה עם Docker Compose והבהרת concurrency, factory, שימוש בפיצ'רים חדשים והפרדה בין שכבות |
