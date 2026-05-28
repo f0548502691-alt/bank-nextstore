@@ -6,7 +6,9 @@ Dashboard להצגת יתרות בנק מתוך קובץ JSON דמו (`bank_bala
 
 - `src/backend` - ASP.NET Core Web API ב-Clean Architecture.
 - `src/frontend/bank-dashboard` - Angular 20 standalone app.
-- `SPECIFICATION.md` - אפיון הפתרון ויומן שינויים.
+- `SPECIFICATION.md` - אפיון תמציתי, החלטות ארכיטקטורה והמלצות להמשך.
+
+להמלצות המשך וגבולות הרחבה, ראו את סעיף **"המלצות להמשך"** בקובץ `SPECIFICATION.md`.
 
 ## תהליך העבודה
 
