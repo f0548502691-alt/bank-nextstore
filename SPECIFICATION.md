@@ -136,8 +136,6 @@
 - `totalCount` - סך הרשומות אחרי סינון.
 - `page`
 - `pageSize`
-- `sortBy`
-- `sortDirection`
 - `totalPages`
 - `hasPreviousPage`
 - `hasNextPage`
@@ -228,6 +226,8 @@ GET /api/bank-balances/filters
 - `maxAmount`
 - `page`
 - `pageSize`
+- `sortBy`
+- `sortDirection`
 
 ## MediatR ו-CQRS
 
@@ -445,6 +445,24 @@ docker compose up --build
 
 ## החלטות מימוש ויכולת הרחבה
 
+### סיכום החלטות ארכיטקטורה שעלו במהלך הסקירה
+
+סעיף זה מרכז את השאלות המרכזיות שעלו במהלך האפיון והמימוש, ואת ההחלטות הנוכחיות:
+
+- כן משתמשים ב-DTOs כדי להפריד בין מודל Domain פנימי לבין חוזה API חיצוני.
+- כן משתמשים ב-MediatR כרגע עבור CQRS, decoupling, ו-pipeline אחיד ל-FluentValidation.
+- כן השרת נשאר stateless מבחינת HTTP/session, למרות שיש cache קריאה בזיכרון עבור נתוני ה-JSON.
+- כן קיימת ולידציה בצד שרת באמצעות FluentValidation עבור query parameters, ובנפרד קיימת ולידציית תקינות לנתוני JSON.
+- כן הסינון, המיון וה-pagination מתבצעים בצד שרת. בצד לקוח לא מבצעים סינון עסקי על כלל הנתונים.
+- כן יש ניהול שגיאות אחיד: ProblemDetails בצד שרת ו-HTTP interceptor בצד Angular.
+- כן יש קובצי environment בצד Angular עבור `apiBaseUrl`.
+- כן Dockerfiles הם multi-stage.
+- כן יש logging אחיד בצד שרת באמצעות Serilog.
+- לא משתמשים כרגע ב-SignalStore; Signals מקומיים מספיקים למסך יחיד.
+- לא נדרש Redis בשלב הנוכחי; הוא רלוונטי רק אם מדידה תראה צורך ב-distributed cache או caching של שאילתות יקרות.
+- לא קוראים את קובץ ה-JSON בצורה מקבילית; הקובץ נטען פעם אחת בצורה thread-safe.
+- לא חייבים DB כדי לבצע pagination על JSON, אבל עבור מיליוני רשומות עם sorting/filtering/concurrency גבוה DB או index ייעודי יהיו עדיפים.
+
 ### ריבוי קריאות במקביל
 
 - ה-API stateless ברמת request.
@@ -453,13 +471,102 @@ docker compose up --build
 - לאחר הטעינה, הקריאות עובדות מול רשימה immutable בפועל, והסינון והמיון מתבצעים בזיכרון לכל request.
 - ה-response מחזיר רק עמוד אחד של נתונים כדי למנוע עומס מיותר על הרשת ועל רינדור הטבלה.
 
+המשמעות היא שהשרת stateless מבחינת התנהגות API: אין session, אין שמירת מצב משתמש, אין תלות בסדר קריאות, ואין persistence של בחירות UI. ה-cache בזיכרון הוא optimization פנימי של נתוני demo בלבד. אם מריצים כמה instances, כל instance יטען לעצמו cache נפרד; אם בעתיד צריך cache משותף בין instances, אפשר לשקול Redis או distributed cache.
+
+במצב של הרבה קריאות במקביל:
+
+- אין קריאת דיסק חוזרת לכל request.
+- הטעינה הראשונה מתבצעת פעם אחת בלבד.
+- כל request עדיין מבצע filtering/sorting/pagination בזיכרון.
+- צוואר הבקבוק האפשרי הוא CPU וזיכרון, לא I/O של הקובץ.
+- עבור עומסים גבוהים או מיליוני רשומות, יש להעביר את פעולת השאילתה ל-DB/search index או לבנות indexes ייעודיים סביב JSON.
+
 ### ביצועי קריאת הקובץ
 
 קובץ של 5,000 רשומות הוא קטן יחסית. הקריאה האיטית ביותר היא הטעינה הראשונה מהדיסק וה-deserialization, ולאחר מכן אין קריאה חוזרת לקובץ. כבר קיים pagination בצד שרת, אך עבור כמויות עצומות מקור הנתונים יצטרך לעבור ל-DB או search/index store, כך שהסינון, המיון וה-pagination יתבצעו בשאילתה עצמה ולא בזיכרון של שרת האפליקציה.
 
+לא מומלץ לקרוא את אותו קובץ JSON בצורה מקבילית עבור אותו dataset:
+
+- JSON array רגיל אינו מתאים טוב לחלוקה פשוטה למקטעים מקביליים כי צריך להבין גבולות אובייקטים.
+- קריאה מקבילית מאותו קובץ עלולה להגדיל מורכבות בלי לשפר משמעותית ביצועים.
+- עבור 5,000 רשומות העלות זניחה.
+- עבור קבצים גדולים יותר עדיף לשקול JSON Lines, indexing, SQLite/DB, או טעינה batch עם preprocessing.
+
+אם חייבים להישאר עם JSON בכמויות גדולות, קיימות כמה רמות פתרון:
+
+1. JSON נטען לזיכרון - מתאים לנתונים קטנים/בינוניים.
+2. JSON עם indexes בזיכרון - מתאים לנתונים read-only עם שדות סינון/מיון מוגדרים מראש.
+3. JSON Lines + streaming + cursor pagination - מתאים לקריאה קדימה ולסדר טבעי של קובץ, פחות מתאים למיון דינמי.
+4. SQLite כ-embedded database - עדיין file-based, אבל מאפשר indexes, SQL ו-pagination יעיל יותר.
+
+לכן pagination על JSON אפשרי, אך השילוב של filtering, sorting, total count, summary והרבה משתמשים על מיליוני רשומות מצדיק בדרך כלל DB או index store.
+
+### `Lazy<Task<IReadOnlyList<BankBalance>>>`
+
+ה-repository משתמש ב:
+
+```csharp
+private readonly Lazy<Task<IReadOnlyList<BankBalance>>> _balances;
+```
+
+המטרה:
+
+- טעינה רק כאשר מגיעה הקריאה הראשונה שדורשת נתונים.
+- טעינה פעם אחת בלבד לכל instance של השרת.
+- thread-safety מובנה דרך `LazyThreadSafetyMode.ExecutionAndPublication`.
+- תמיכה בטעינה async של קובץ ו-deserialization.
+- מניעת מצב שבו כמה requests ראשונים קוראים את אותו קובץ במקביל.
+
+חלופה אפשרית היא טעינה בזמן startup או hosted service. בשלב הדמו, Lazy מתאים כי הוא פשוט, יעיל, ולא מאריך startup ללא צורך.
+
+### Cache בצד שרת ובצד לקוח
+
+#### Cache בצד שרת
+
+בשלב הנוכחי כן נשמר cache בצד שרת:
+
+- קובץ JSON נטען פעם אחת לזיכרון.
+- כל המשתמשים נהנים מאותה טעינה.
+- לא מעבירים את כל 5,000 הרשומות לכל לקוח.
+
+עבור מיליוני רשומות, cache מלא בזיכרון עלול להיות בעייתי מבחינת RAM ו-CPU. במצב כזה עדיף:
+
+- DB עם indexes.
+- search/index store.
+- cache חלקי לפי שאילתות נפוצות עם TTL.
+- precomputed summaries.
+- Redis רק אם יש צורך מוכח ב-distributed cache או עומס שאילתות חוזר.
+
+#### Cache בצד לקוח
+
+בצד לקוח לא נשמור את כלל dataset. כן אפשר לשמור:
+
+- filter options כגון בנקים, מטבעות, סוגי יתרה וסטטוסים.
+- העמוד האחרון שנטען.
+- מצב UI כמו פילטרים, עמוד, גודל עמוד ומיון.
+- state ב-URL כדי לאפשר שיתוף וחזרה לאותו מצב.
+
+לא מומלץ לשמור בצד לקוח מיליוני רשומות או לבצע client-side filtering על כלל הנתונים.
+
 ### Factory
 
 בשלב הנוכחי אין צורך ב-Factory: קיימת תשתית אחת ברורה לקריאת נתונים, וה-DI מחבר abstraction ל-implementation. Factory יהיה מוצדק אם יתווספו כמה מקורות נתונים, בחירה דינמית לפי tenant, קבצים שונים לפי סביבה, או אסטרטגיות parsing שונות.
+
+### `DemoDataOptions`
+
+`DemoDataOptions` הוא מימוש של Options pattern ב-ASP.NET Core. הוא מרכז את הגדרת מקור נתוני הדמו:
+
+```json
+"DemoData": {
+  "FilePath": "data/bank_balances_demo_5000.json"
+}
+```
+
+הסיבה לשימוש בו:
+
+- לא לקודד path לקובץ ישירות בתוך repository.
+- לאפשר הגדרה שונה בין development, Docker, tests או סביבות אחרות.
+- לשמור על repository תלוי ב-configuration abstraction ולא בערכים hard-coded.
 
 ### ולידציות ושגיאות
 
@@ -469,11 +576,51 @@ docker compose up --build
 - שגיאות שרת מוחזרות כ-ProblemDetails עם `traceId`.
 - בצד הלקוח קיים HTTP interceptor שמרכז טיפול בשגיאות API ומייצר הודעה ידידותית למשתמש.
 
+חלוקת אחריות:
+
+- ולידציית request שייכת ל-Application layer כי זו לוגיקה של use case.
+- ולידציית JSON שייכת ל-Infrastructure כי היא קשורה לאיכות מקור הנתונים.
+- ולידציית UI בסיסית יכולה לשפר חוויית משתמש, אך אינה מחליפה ולידציה בשרת.
+
+### DTO מול Domain
+
+קיום `Domain` וגם `DTO` אינו כפילות אלא הפרדה מכוונת:
+
+- `Domain` מייצג מודל עסקי פנימי, בלתי תלוי ב-HTTP, JSON או Angular.
+- `DTO` מייצג contract חיצוני של API מול ה-Frontend.
+
+בשלב הדמו השדות דומים, אבל ההפרדה מאפשרת:
+
+- שינוי מודל פנימי בלי לשבור לקוחות.
+- הסתרת שדות פנימיים.
+- הוספת calculated fields.
+- versioning עתידי של API.
+- שמירה על גבולות Clean Architecture.
+
+### MediatR ו-AddMediatR
+
+`AddMediatR` אינו חובה טכנית בפרויקט קטן. ניתן היה לממש Controller שקורא ישירות ל-Application service. הבחירה ב-MediatR נעשתה כדי:
+
+- להפריד Controller מ-use cases.
+- לממש CQRS בצורה עקבית.
+- לאפשר pipeline behaviors, כמו FluentValidation.
+- לאפשר הרחבות עתידיות כגון logging, metrics, authorization או caching behavior.
+- להשאיר Controllers דקים.
+
+הסתייגות: הגרסה העדכנית של MediatR מציגה אזהרת רישוי בסביבת dev/test. לפני production יש לקבל החלטה אם להשתמש ברישיון מתאים, לבחור חלופה, או להחליף ל-Application services פשוטים.
+
 ### לוגים
 
 - השרת משתמש ב-Serilog ל-structured logging.
 - כל request נרשם דרך `UseSerilogRequestLogging`.
 - טעינת קובץ ה-JSON נרשמת עם נתיב וכמות רשומות.
+
+הרחבה מומלצת ל-production:
+
+- correlation id אחיד בין Frontend, Nginx ו-Backend.
+- OpenTelemetry ל-tracing.
+- מדדים כגון latency, error rate, request count ו-slow queries.
+- לוגים מובנים גם בצד Frontend לשגיאות משמעותיות, בלי לחשוף מידע רגיש.
 
 ### קונפיגורציה
 
@@ -485,10 +632,81 @@ docker compose up --build
 - Angular: standalone component, `inject`, Signals, `computed`, control flow חדש עם `@if` / `@for`, ו-`provideHttpClient`.
 - .NET: target ל-`.NET 10`, minimal hosting model, records immutable, primary constructors, `DateOnly`, async APIs ו-DI מובנה.
 
+### Signals, SignalStore ו-state בצד לקוח
+
+בשלב הנוכחי נעשה שימוש ב-Angular Signals מקומיים בתוך component:
+
+- רשימת יתרות.
+- summary.
+- loading/error.
+- pagination state.
+- computed עבור סכומי מטבעות.
+
+לא נעשה שימוש ב-SignalStore כרגע כי state המסך עדיין מקומי ופשוט. SignalStore יהיה רלוונטי אם:
+
+- כמה מסכים ישתפו את אותם נתונים.
+- יתווסף client-side cache מורכב.
+- תהיה שמירת state ב-URL עם flows מורכבים.
+- יתווספו selection, bulk actions, permissions או workflows נוספים.
+
+### Virtual Scroll וחוויית משתמש לנתוני עתק
+
+Virtual Scroll אינו תחליף ל-server-side pagination/filtering/sorting. הוא פותר בעיקר את בעיית רינדור DOM בדפדפן.
+
+בשלב הנוכחי pagination מספיק כי ה-UI מציג עמוד מוגבל של רשומות. Virtual Scroll יהיה מתאים אם רוצים חוויית גלילה רציפה במקום pagination קלאסי, בתנאי שהנתונים נטענים מהשרת במנות קטנות.
+
+המלצות UX לנתוני עתק:
+
+- server-side filtering/sorting/pagination.
+- debounce לחיפוש.
+- ביטול requests קודמים בזמן הקלדה.
+- loading skeleton או מצב טעינה ברור.
+- שמירת state ב-URL.
+- הצגת פילטרים פעילים.
+- export אסינכרוני במקום הורדת מיליוני רשומות דרך endpoint הטבלה.
+- לשקול cursor/keyset pagination עבור datasets גדולים ומשתנים.
+
 ### ניהול תלויות
 
 - התלויות נוספו דרך package managers (`dotnet add package`, Angular CLI/npm) כדי לקבל גרסאות עדכניות.
 - MediatR בגרסה העדכנית שנוספה מציג אזהרת רישוי בסביבת dev/test. לפני production צריך לקבל החלטה מפורשת: שימוש עם רישיון מתאים, בחירה בגרסה/חלופה שמתאימה למדיניות הרישוי, או החלפה במימוש CQRS פנימי פשוט אם רוצים לצמצם תלות.
+
+ספריות מרכזיות:
+
+- Backend: ASP.NET Core, MediatR, FluentValidation, Serilog.
+- Frontend: Angular, RxJS, TypeScript.
+
+יש להמשיך לבדוק עדכניות, רישוי ופגיעויות אבטחה לפני production.
+
+### Redis
+
+Redis לא נדרש בשלב הנוכחי:
+
+- הנתונים נטענים מ-JSON פעם אחת לכל instance.
+- dataset הדמו קטן.
+- אין session server-side.
+- אין multi-instance shared cache.
+- אין מדידה שמראה bottleneck שמצריך distributed cache.
+
+Redis יהיה רלוונטי אם:
+
+- יש כמה instances וצריך cache משותף.
+- יש שאילתות חוזרות ויקרות עם אותם פילטרים.
+- summary/aggregations יקרים.
+- יש צורך ב-rate limiting מבוזר.
+- יש צורך ב-pub/sub או invalidation בין instances.
+
+### Docker
+
+קיימים Dockerfiles multi-stage:
+
+- Backend: build עם .NET SDK ואז runtime עם ASP.NET image.
+- Frontend: build עם Node ואז runtime עם Nginx.
+
+`docker-compose.yml` מריץ שני שירותים:
+
+- `backend` על פורט `5000`.
+- `frontend` על פורט `4200`, כאשר Nginx מעביר `/api` לשירות backend.
 
 ### הפרדה בין שכבות וצימוד
 
@@ -519,6 +737,9 @@ docker compose up --build
 - האם לעבור בעתיד ל-cursor/keyset pagination במקום page/pageSize.
 - האם להוסיף OpenTelemetry להפצת trace בין Frontend, Nginx ו-Backend.
 - החלטת רישוי/חלופה ל-MediatR לפני production.
+- האם להוסיף SignalStore כאשר state ה-Frontend יתרחב מעבר למסך יחיד.
+- האם להוסיף Redis לאחר מדידה של עומסי שאילתות או צורך ב-distributed cache.
+- האם להישאר עם JSON + indexes, לעבור ל-SQLite embedded, או לעבור ל-DB/search index כאשר הנתונים יגדלו למיליוני רשומות.
 
 ## יומן שינויים
 
@@ -530,3 +751,4 @@ docker compose up --build
 | 2026-05-28 | הוספת pagination בצד שרת ובמסך | הכנת חוזה ה-API וה-UI לכמויות נתונים גדולות והפחתת עומס רינדור/רשת |
 | 2026-05-28 | הוספת sorting, ולידציות JSON, interceptor ולוגים אחידים | חיזוק חוויית תפעול ופיתוח תוך שמירה על מקור נתונים JSON בשלב הדמו |
 | 2026-05-28 | מעבר ל-FluentValidation עבור query validation | ריכוז חוקי ולידציה בשכבת Application ושמירה על Controller דק |
+| 2026-05-28 | ריכוז החלטות ארכיטקטורה מהשיחה | תיעוד MediatR, stateless/cache, Domain מול DTO, Lazy loading, Redis, SignalStore, Virtual Scroll, JSON במיליוני רשומות ו-Docker |
