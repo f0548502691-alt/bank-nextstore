@@ -47,7 +47,15 @@
   </div>
 
   @if (loading()) {
-    <div class="message">טוען נתונים...</div>
+    <div class="table-skeleton" aria-label="טוען נתונים">
+      @for (row of [1, 2, 3, 4, 5]; track row) {
+        <div class="skeleton-row">
+          @for (column of [1, 2, 3, 4, 5, 6, 7]; track column) {
+            <span class="skeleton-cell"></span>
+          }
+        </div>
+      }
+    </div>
   } @else if (balances().length === 0) {
     <div class="message">לא נמצאו תוצאות עבור הסינון הנוכחי.</div>
   } @else {

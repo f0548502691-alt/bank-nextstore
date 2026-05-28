@@ -329,6 +329,42 @@ button:disabled {
   overflow-x: auto;
 }
 
+.table-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px;
+}
+
+.skeleton-row {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(80px, 1fr));
+  gap: 12px;
+}
+
+.skeleton-cell {
+  height: 18px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e8eef8;
+  position: relative;
+}
+
+.skeleton-cell::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8), transparent);
+  content: '';
+  transform: translateX(100%);
+  animation: skeleton-shimmer 1.2s infinite;
+}
+
+@keyframes skeleton-shimmer {
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
