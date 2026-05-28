@@ -6,6 +6,8 @@ import { App } from './app';
 
 describe('App', () => {
   beforeEach(async () => {
+    window.history.replaceState({}, '', '/');
+
     await TestBed.configureTestingModule({
       imports: [App],
       providers: [provideHttpClient(), provideHttpClientTesting()],

@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, ViewEncapsulation, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { finalize } from 'rxjs';
+import { Subscription, finalize } from 'rxjs';
 
 import {
   BankBalance,
@@ -33,6 +33,7 @@ import { SummaryCardsComponent } from './features/dashboard/components/summary-c
 export class App implements OnInit, OnDestroy {
   private readonly bankBalancesApi = inject(BankBalancesApiService);
   private searchDebounceHandle: ReturnType<typeof setTimeout> | null = null;
+  private balancesSubscription: Subscription | null = null;
   private requestSequence = 0;
 
   protected readonly balances = signal<BankBalance[]>([]);
@@ -69,22 +70,26 @@ export class App implements OnInit, OnDestroy {
   protected filterModel: BankBalanceFilterForm = this.createEmptyFilters();
 
   ngOnInit(): void {
+    this.restoreStateFromUrl();
     this.loadFilterOptions();
     this.loadBalances();
   }
 
   ngOnDestroy(): void {
     this.clearSearchDebounce();
+    this.balancesSubscription?.unsubscribe();
   }
 
   protected loadBalances(bypassCache = false): void {
     const requestId = ++this.requestSequence;
+    this.balancesSubscription?.unsubscribe();
     this.loading.set(true);
     this.error.set(null);
     this.filterModel.page = this.page();
     this.filterModel.pageSize = this.pageSize();
+    this.syncUrlState();
 
-    this.bankBalancesApi
+    this.balancesSubscription = this.bankBalancesApi
       .getBalances(this.filterModel, { bypassCache })
       .pipe(finalize(() => {
         if (requestId === this.requestSequence) {
@@ -105,6 +110,9 @@ export class App implements OnInit, OnDestroy {
           this.totalCount.set(response.totalCount);
           this.hasPreviousPage.set(response.hasPreviousPage);
           this.hasNextPage.set(response.hasNextPage);
+          this.filterModel.page = response.page;
+          this.filterModel.pageSize = response.pageSize;
+          this.syncUrlState();
         },
         error: (error: unknown) => {
           if (requestId !== this.requestSequence) {
@@ -195,6 +203,66 @@ export class App implements OnInit, OnDestroy {
 
     clearTimeout(this.searchDebounceHandle);
     this.searchDebounceHandle = null;
+  }
+
+  private restoreStateFromUrl(): void {
+    const params = new URLSearchParams(window.location.search);
+    this.filterModel.search = params.get('search') ?? '';
+    this.filterModel.bankName = params.get('bankName') ?? '';
+    this.filterModel.currency = params.get('currency') ?? '';
+    this.filterModel.balanceType = params.get('balanceType') ?? '';
+    this.filterModel.status = params.get('status') ?? '';
+    this.filterModel.minAmount = this.parseNumberParam(params.get('minAmount'));
+    this.filterModel.maxAmount = this.parseNumberParam(params.get('maxAmount'));
+    this.filterModel.sortBy = params.get('sortBy') ?? 'date';
+    this.filterModel.sortDirection = params.get('sortDirection') === 'asc' ? 'asc' : 'desc';
+
+    const page = this.parseNumberParam(params.get('page'));
+    const pageSize = this.parseNumberParam(params.get('pageSize'));
+    this.page.set(page && page > 0 ? page : 1);
+    this.pageSize.set(pageSize && pageSize > 0 ? pageSize : 50);
+  }
+
+  private syncUrlState(): void {
+    const params = new URLSearchParams();
+
+    this.appendStringParam(params, 'search', this.filterModel.search);
+    this.appendStringParam(params, 'bankName', this.filterModel.bankName);
+    this.appendStringParam(params, 'currency', this.filterModel.currency);
+    this.appendStringParam(params, 'balanceType', this.filterModel.balanceType);
+    this.appendStringParam(params, 'status', this.filterModel.status);
+    this.appendNumberParam(params, 'minAmount', this.filterModel.minAmount);
+    this.appendNumberParam(params, 'maxAmount', this.filterModel.maxAmount);
+    this.appendNumberParam(params, 'page', this.page() === 1 ? null : this.page());
+    this.appendNumberParam(params, 'pageSize', this.pageSize() === 50 ? null : this.pageSize());
+    this.appendStringParam(params, 'sortBy', this.filterModel.sortBy === 'date' ? '' : this.filterModel.sortBy);
+    this.appendStringParam(params, 'sortDirection', this.filterModel.sortDirection === 'desc' ? '' : this.filterModel.sortDirection);
+
+    const queryString = params.toString();
+    const nextUrl = queryString ? `${window.location.pathname}?${queryString}` : window.location.pathname;
+    window.history.replaceState({}, '', nextUrl);
+  }
+
+  private parseNumberParam(value: string | null): number | null {
+    if (value === null || value.trim() === '') {
+      return null;
+    }
+
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  private appendStringParam(params: URLSearchParams, key: string, value: string): void {
+    const trimmed = value.trim();
+    if (trimmed) {
+      params.set(key, trimmed);
+    }
+  }
+
+  private appendNumberParam(params: URLSearchParams, key: string, value: number | null): void {
+    if (value !== null && !Number.isNaN(value)) {
+      params.set(key, String(value));
+    }
   }
 
   private createEmptyFilters(): BankBalanceFilterForm {
