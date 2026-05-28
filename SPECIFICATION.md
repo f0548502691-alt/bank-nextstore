@@ -12,7 +12,7 @@
 - טעינת נתוני דמו מקובץ JSON.
 - הצגת יתרות בנק בטבלת Dashboard נוחה לקריאה.
 - חיפוש חופשי לפי שדות מרכזיים.
-- סינון לפי מאפיינים עסקיים כגון בנק, מטבע, סוג חשבון וטווח יתרות.
+- סינון לפי מאפיינים עסקיים כגון בנק, מטבע, סוג יתרה, סטטוס וטווח סכומים.
 - הפרדה ברורה בין Backend, Frontend ושכבות פנימיות.
 - שימוש ב-Clean Architecture ובתבניות נפוצות כגון CQRS ו-MediatR.
 - מחשבה על איכות קוד, חוויית משתמש וחוויית פיתוח.
@@ -50,34 +50,30 @@
 
 מקור הנתונים יהיה קובץ JSON שיצורף לפרויקט. אם מבנה הקובץ בפועל שונה, האפיון יעודכן בהתאם.
 
-מבנה צפוי לרשומת יתרת בנק:
+מבנה רשומת יתרת בנק בקובץ `bank_balances_demo_5000.json`:
 
 ```json
 {
-  "id": "acc-001",
-  "bankName": "Bank Leumi",
-  "branchNumber": "001",
-  "accountNumber": "123456",
-  "accountHolderName": "Demo Company Ltd",
-  "accountType": "Business",
+  "id": 1,
+  "date": "08/01/2025",
+  "bankName": "דיסקונט",
+  "accountNumber": "237167",
+  "balanceType": "יתרת עו\"ש",
   "currency": "ILS",
-  "currentBalance": 125000.5,
-  "availableBalance": 110000.0,
-  "lastUpdated": "2026-05-28T07:00:00Z"
+  "amount": 245571.18,
+  "status": "פעיל"
 }
 ```
 
 שדות להצגה בטבלה:
 
+- תאריך
 - שם בנק
-- מספר סניף
 - מספר חשבון
-- בעל החשבון
-- סוג חשבון
+- סוג יתרה
 - מטבע
-- יתרה נוכחית
-- יתרה זמינה
-- תאריך עדכון אחרון
+- סכום
+- סטטוס
 
 ## יכולות משתמש
 
@@ -102,9 +98,9 @@
 
 - שם בנק
 - מספר חשבון
-- שם בעל החשבון
+- סוג יתרה
 - מטבע
-- סוג חשבון
+- סטטוס
 
 החיפוש יהיה case-insensitive בצד השרת כדי לשמור על מקור אמת יחיד להתנהגות.
 
@@ -114,15 +110,16 @@
 
 - בנק
 - מטבע
-- סוג חשבון
-- יתרה מינימלית
-- יתרה מקסימלית
+- סוג יתרה
+- סטטוס
+- סכום מינימלי
+- סכום מקסימלי
 
 ### מיון
 
 בשלב ראשון:
 
-- מיון ברירת מחדל לפי `lastUpdated` בסדר יורד.
+- מיון ברירת מחדל לפי `date` בסדר יורד ולאחר מכן `id` בסדר יורד.
 
 הרחבה אפשרית:
 
@@ -206,9 +203,10 @@ GET /api/bank-balances/filters
 - `search`
 - `bankName`
 - `currency`
-- `accountType`
-- `minBalance`
-- `maxBalance`
+- `balanceType`
+- `status`
+- `minAmount`
+- `maxAmount`
 
 ## MediatR ו-CQRS
 
@@ -320,7 +318,7 @@ features/dashboard/
 ### Get balances
 
 ```http
-GET /api/bank-balances?search=demo&currency=ILS&minBalance=0
+GET /api/bank-balances?search=דיסקונט&currency=ILS&minAmount=0
 ```
 
 Response:
@@ -329,19 +327,25 @@ Response:
 {
   "items": [
     {
-      "id": "acc-001",
-      "bankName": "Bank Leumi",
-      "branchNumber": "001",
-      "accountNumber": "123456",
-      "accountHolderName": "Demo Company Ltd",
-      "accountType": "Business",
+      "id": 1,
+      "date": "2025-01-08",
+      "bankName": "דיסקונט",
+      "accountNumber": "237167",
+      "balanceType": "יתרת עו\"ש",
       "currency": "ILS",
-      "currentBalance": 125000.5,
-      "availableBalance": 110000,
-      "lastUpdated": "2026-05-28T07:00:00Z"
+      "amount": 245571.18,
+      "status": "פעיל"
     }
   ],
-  "totalCount": 1
+  "totalCount": 1,
+  "summary": {
+    "totalCount": 1,
+    "bankCount": 1,
+    "latestDate": "2025-01-08",
+    "totalAmountByCurrency": {
+      "ILS": 245571.18
+    }
+  }
 }
 ```
 
@@ -355,9 +359,10 @@ Response:
 
 ```json
 {
-  "banks": ["Bank Leumi", "Bank Hapoalim"],
+  "banks": ["דיסקונט", "פועלים"],
   "currencies": ["ILS", "USD", "EUR"],
-  "accountTypes": ["Business", "Checking", "Savings"]
+  "balanceTypes": ["יתרת עו\"ש", "מניות"],
+  "statuses": ["פעיל", "לא פעיל", "חסום"]
 }
 ```
 
@@ -368,7 +373,7 @@ Response:
 - Unit tests ל-Application query handler:
   - חיפוש.
   - סינון לפי מטבע.
-  - סינון לפי טווח יתרות.
+  - סינון לפי סטטוס וטווח סכומים.
   - שילוב כמה סינונים.
 - Unit tests לטעינת JSON תקין.
 - בדיקות ידניות ל-Frontend:
@@ -386,7 +391,7 @@ Response:
 ```bash
 cd src/backend
 dotnet restore
-dotnet run --project BankDashboard.Api
+dotnet run --project BankDashboard.Api --urls http://localhost:5000
 ```
 
 ### Frontend
@@ -429,3 +434,4 @@ npm start
 | תאריך | שינוי | סיבה |
 | --- | --- | --- |
 | 2026-05-28 | יצירת אפיון ראשוני | תכנון Dashboard ליתרות בנק לפי דרישות המטלה, כולל Clean Architecture, MediatR, Angular 20 ו-.NET 10 |
+| 2026-05-28 | תחילת מימוש Backend ו-Frontend לפי קובץ JSON בפועל | התאמת האפיון לשדות `date`, `balanceType`, `amount`, `status`; הוספת API, repository, queries, בדיקות יחידה ראשוניות ומסך Dashboard |
