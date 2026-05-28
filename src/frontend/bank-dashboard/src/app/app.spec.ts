@@ -80,9 +80,8 @@ describe('App', () => {
       },
     });
 
-    const input = fixture.nativeElement.querySelector('input[name="search"]') as HTMLInputElement;
-    input.value = 'לאומי אופציות';
-    input.dispatchEvent(new Event('input'));
+    const component = fixture.componentInstance as unknown as { scheduleSearch: (search: string) => void };
+    component.scheduleSearch('לאומי אופציות');
     fixture.detectChanges();
 
     tick(499);
