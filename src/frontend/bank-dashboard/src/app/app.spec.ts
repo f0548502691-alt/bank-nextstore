@@ -88,11 +88,15 @@ describe('App', () => {
     http.expectNone((request) => request.params.get('search') === 'לאומי אופציות');
 
     tick(1);
-    http.expectOne((request) =>
+    const searchRequest = http.expectOne((request) =>
       request.url === '/api/bank-balances'
       && request.params.get('search') === 'לאומי אופציות'
       && request.params.get('page') === '1'
-    ).flush({
+    );
+
+    expect(searchRequest.request.params.get('search')).toBe('לאומי אופציות');
+
+    searchRequest.flush({
       items: [],
       totalCount: 0,
       page: 1,
