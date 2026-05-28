@@ -48,8 +48,16 @@
           name="search"
           type="search"
           placeholder="בנק, חשבון, סוג יתרה, מטבע או סטטוס"
-          [(ngModel)]="filterModel.search"
+          [ngModel]="filterModel.search"
+          (ngModelChange)="scheduleSearch($event)"
         />
+        <small class="field-hint">
+          החיפוש מתבצע אוטומטית אחרי עצירה קצרה בהקלדה. ניתן לחפש כמה מילים, למשל:
+          לאומי אופציות.
+        </small>
+        @if (searchPending()) {
+          <small class="field-hint active">ממתין לסיום ההקלדה...</small>
+        }
       </label>
 
       <label>

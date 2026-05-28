@@ -99,6 +99,18 @@ label {
   font-weight: 700;
 }
 
+.field-hint {
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.field-hint.active {
+  color: #2f5bd3;
+  font-weight: 700;
+}
+
 input,
 select,
 button {

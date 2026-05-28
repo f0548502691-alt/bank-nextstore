@@ -20,6 +20,24 @@ public sealed class GetBankBalancesQueryHandlerTests
     }
 
     [Fact]
+    public async Task Handle_FiltersByAllSearchTermsAcrossDifferentFields()
+    {
+        var handler = new GetBankBalancesQueryHandler(new InMemoryBankBalanceReadRepository(
+        [
+            new(10, new DateOnly(2026, 2, 1), "לאומי", "111111", "אופציות", "ILS", 100m, "פעיל"),
+            new(11, new DateOnly(2026, 2, 1), "לאומי", "222222", "מניות", "ILS", 100m, "פעיל"),
+            new(12, new DateOnly(2026, 2, 1), "דיסקונט", "333333", "אופציות", "ILS", 100m, "פעיל")
+        ]));
+
+        var response = await handler.Handle(
+            CreateQuery(search: "לאומי אופציות"),
+            CancellationToken.None);
+
+        var item = Assert.Single(response.Items);
+        Assert.Equal(10, item.Id);
+    }
+
+    [Fact]
     public async Task Handle_AppliesCurrencyStatusAndAmountRangeFilters()
     {
         var handler = new GetBankBalancesQueryHandler(new InMemoryBankBalanceReadRepository(TestBalances));

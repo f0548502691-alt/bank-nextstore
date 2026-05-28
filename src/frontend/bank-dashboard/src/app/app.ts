@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 
@@ -17,8 +17,10 @@ import { BankBalancesApiService } from './features/dashboard/services/bank-balan
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
-export class App implements OnInit {
+export class App implements OnInit, OnDestroy {
   private readonly bankBalancesApi = inject(BankBalancesApiService);
+  private searchDebounceHandle: ReturnType<typeof setTimeout> | null = null;
+  private requestSequence = 0;
 
   protected readonly balances = signal<BankBalance[]>([]);
   protected readonly filterOptions = signal<BankBalanceFilterOptions>({
@@ -30,6 +32,7 @@ export class App implements OnInit {
   protected readonly summary = signal<BankBalanceSummary | null>(null);
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
+  protected readonly searchPending = signal(false);
   protected readonly page = signal(1);
   protected readonly pageSize = signal(50);
   protected readonly totalPages = signal(0);
@@ -57,7 +60,12 @@ export class App implements OnInit {
     this.loadBalances();
   }
 
+  ngOnDestroy(): void {
+    this.clearSearchDebounce();
+  }
+
   protected loadBalances(): void {
+    const requestId = ++this.requestSequence;
     this.loading.set(true);
     this.error.set(null);
     this.filterModel.page = this.page();
@@ -65,9 +73,17 @@ export class App implements OnInit {
 
     this.bankBalancesApi
       .getBalances(this.filterModel)
-      .pipe(finalize(() => this.loading.set(false)))
+      .pipe(finalize(() => {
+        if (requestId === this.requestSequence) {
+          this.loading.set(false);
+        }
+      }))
       .subscribe({
         next: (response) => {
+          if (requestId !== this.requestSequence) {
+            return;
+          }
+
           this.balances.set(response.items);
           this.summary.set(response.summary);
           this.page.set(response.page);
@@ -78,6 +94,10 @@ export class App implements OnInit {
           this.hasNextPage.set(response.hasNextPage);
         },
         error: (error: unknown) => {
+          if (requestId !== this.requestSequence) {
+            return;
+          }
+
           this.balances.set([]);
           this.summary.set(null);
           this.totalPages.set(0);
@@ -90,11 +110,26 @@ export class App implements OnInit {
   }
 
   protected applyFilters(): void {
+    this.clearSearchDebounce();
+    this.searchPending.set(false);
     this.page.set(1);
     this.loadBalances();
   }
 
+  protected scheduleSearch(search: string): void {
+    this.filterModel.search = search;
+    this.clearSearchDebounce();
+    this.searchPending.set(true);
+    this.searchDebounceHandle = setTimeout(() => {
+      this.searchPending.set(false);
+      this.page.set(1);
+      this.loadBalances();
+    }, 500);
+  }
+
   protected clearFilters(): void {
+    this.clearSearchDebounce();
+    this.searchPending.set(false);
     this.filterModel = this.createEmptyFilters();
     this.page.set(1);
     this.pageSize.set(this.filterModel.pageSize);
@@ -131,6 +166,15 @@ export class App implements OnInit {
       error: (error: unknown) =>
         this.error.set(error instanceof Error ? error.message : 'לא ניתן לטעון את אפשרויות הסינון.'),
     });
+  }
+
+  private clearSearchDebounce(): void {
+    if (this.searchDebounceHandle === null) {
+      return;
+    }
+
+    clearTimeout(this.searchDebounceHandle);
+    this.searchDebounceHandle = null;
   }
 
   private createEmptyFilters(): BankBalanceFilterForm {

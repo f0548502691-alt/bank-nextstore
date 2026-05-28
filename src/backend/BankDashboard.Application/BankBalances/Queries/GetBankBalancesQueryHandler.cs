@@ -45,17 +45,18 @@ public sealed class GetBankBalancesQueryHandler(IBankBalanceReadRepository repos
 
     private static bool MatchesSearch(BankBalance balance, string? search)
     {
-        var term = Normalize(search);
-        if (term is null)
+        var terms = SplitSearchTerms(search);
+        if (terms.Length == 0)
         {
             return true;
         }
 
-        return Contains(balance.BankName, term)
+        return terms.All(term =>
+            Contains(balance.BankName, term)
             || Contains(balance.AccountNumber, term)
             || Contains(balance.BalanceType, term)
             || Contains(balance.Currency, term)
-            || Contains(balance.Status, term);
+            || Contains(balance.Status, term));
     }
 
     private static bool MatchesExact(string value, string? filter)
@@ -69,6 +70,9 @@ public sealed class GetBankBalancesQueryHandler(IBankBalanceReadRepository repos
 
     private static string? Normalize(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static string[] SplitSearchTerms(string? search) =>
+        Normalize(search)?.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? [];
 
     private static IOrderedEnumerable<BankBalance> ApplySorting(
         IEnumerable<BankBalance> balances,
