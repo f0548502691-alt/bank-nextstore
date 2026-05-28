@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\BankDashboard.Application\BankDashboard.Application.csproj" />
     <ProjectReference Include="..\BankDashboard.Domain\BankDashboard.Domain.csproj" />
+    <ProjectReference Include="..\BankDashboard.Infrastructure\BankDashboard.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
