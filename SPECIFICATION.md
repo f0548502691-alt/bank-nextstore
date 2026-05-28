@@ -484,6 +484,11 @@ docker compose up --build
 - Angular: standalone component, `inject`, Signals, `computed`, control flow חדש עם `@if` / `@for`, ו-`provideHttpClient`.
 - .NET: target ל-`.NET 10`, minimal hosting model, records immutable, primary constructors, `DateOnly`, async APIs ו-DI מובנה.
 
+### ניהול תלויות
+
+- התלויות נוספו דרך package managers (`dotnet add package`, Angular CLI/npm) כדי לקבל גרסאות עדכניות.
+- MediatR בגרסה העדכנית שנוספה מציג אזהרת רישוי בסביבת dev/test. לפני production צריך לקבל החלטה מפורשת: שימוש עם רישיון מתאים, בחירה בגרסה/חלופה שמתאימה למדיניות הרישוי, או החלפה במימוש CQRS פנימי פשוט אם רוצים לצמצם תלות.
+
 ### הפרדה בין שכבות וצימוד
 
 - `Domain` מכיל מודל עסקי נקי ללא תלות בתשתיות.
@@ -512,6 +517,7 @@ docker compose up --build
 
 - האם לעבור בעתיד ל-cursor/keyset pagination במקום page/pageSize.
 - האם להוסיף OpenTelemetry להפצת trace בין Frontend, Nginx ו-Backend.
+- החלטת רישוי/חלופה ל-MediatR לפני production.
 
 ## יומן שינויים
 
