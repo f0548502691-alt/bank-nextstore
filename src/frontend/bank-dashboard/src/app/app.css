@@ -370,8 +370,14 @@ th {
   justify-content: space-between;
   gap: 16px;
   padding: 18px 24px;
-  border-top: 1px solid #e5edf7;
   background: #fbfdff;
+}
+
+.pagination-bar-top {
+  flex-wrap: wrap;
+  justify-content: end;
+  padding: 0;
+  background: transparent;
 }
 
 .page-size-control label {
