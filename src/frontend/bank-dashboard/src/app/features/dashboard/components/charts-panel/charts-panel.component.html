@@ -1,0 +1,59 @@
+<section class="charts-grid" aria-label="גרפים לפי תוצאות הסינון">
+  <article class="panel chart-card">
+    <div class="chart-header">
+      <div>
+        <p class="eyebrow">Currency Mix</p>
+        <h2>סכומים לפי מטבע</h2>
+      </div>
+      <span class="chart-subtitle">מבוסס על כלל התוצאות המסוננות</span>
+    </div>
+
+    @if (currencyTotals().length > 0) {
+      <div class="bar-chart">
+        @for (total of currencyTotals(); track total[0]) {
+          <div class="bar-row">
+            <span class="bar-label">{{ total[0] }}</span>
+            <div class="bar-track" aria-hidden="true">
+              <span class="bar-fill" [style.width.%]="percentage(total[1])"></span>
+            </div>
+            <strong>{{ total[1] | number: '1.0-0' }}</strong>
+          </div>
+        }
+      </div>
+    } @else {
+      <div class="message">אין נתונים להצגה בגרף.</div>
+    }
+  </article>
+
+  <article class="panel chart-card donut-card">
+    <div>
+      <p class="eyebrow">Distribution</p>
+      <h2>התפלגות יתרות</h2>
+    </div>
+
+    @if (currencyTotals().length > 0) {
+      <div class="donut-layout">
+        <div
+          class="donut"
+          [style.background]="'conic-gradient(' + donutGradient() + ')'"
+          aria-hidden="true"
+        >
+          <span>{{ currencyTotals().length }}</span>
+          <small>מטבעות</small>
+        </div>
+
+        <ul class="donut-legend">
+          @for (total of currencyTotals(); track total[0]) {
+            <li>
+              <span class="legend-dot"></span>
+              <span>{{ total[0] }}</span>
+              <strong>{{ share(total[1]) }}%</strong>
+            </li>
+          }
+        </ul>
+      </div>
+    } @else {
+      <div class="message">אין נתונים להצגה בגרף.</div>
+    }
+  </article>
+</section>

@@ -80,6 +80,140 @@ h1 {
   font-weight: 700;
 }
 
+.charts-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.chart-card {
+  min-height: 260px;
+}
+
+.chart-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.chart-header h2,
+.donut-card h2 {
+  margin-bottom: 0;
+}
+
+.chart-subtitle {
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.bar-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.bar-row {
+  display: grid;
+  grid-template-columns: 56px minmax(120px, 1fr) minmax(110px, auto);
+  align-items: center;
+  gap: 12px;
+}
+
+.bar-label {
+  color: #354056;
+  font-weight: 700;
+}
+
+.bar-track {
+  height: 14px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e8eef8;
+}
+
+.bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #2f5bd3, #6c8cff);
+}
+
+.donut-layout {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  align-items: center;
+  gap: 24px;
+  margin-top: 18px;
+}
+
+.donut {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+}
+
+.donut::after {
+  position: absolute;
+  width: 92px;
+  height: 92px;
+  border-radius: 50%;
+  background: #ffffff;
+  content: '';
+}
+
+.donut span,
+.donut small {
+  position: relative;
+  z-index: 1;
+}
+
+.donut span {
+  font-size: 2rem;
+  font-weight: 800;
+}
+
+.donut small {
+  margin-top: 38px;
+  color: #64748b;
+}
+
+.donut-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.donut-legend li {
+  display: grid;
+  grid-template-columns: 12px 1fr auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #2f5bd3;
+}
+
+.donut-legend li:nth-child(2) .legend-dot {
+  background: #16a34a;
+}
+
+.donut-legend li:nth-child(3) .legend-dot {
+  background: #f59e0b;
+}
+
 .panel {
   margin-bottom: 24px;
   padding: 24px;
@@ -258,7 +392,8 @@ th {
 
 @media (max-width: 1100px) {
   .summary-grid,
-  .filters {
+  .filters,
+  .charts-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -276,7 +411,9 @@ th {
   }
 
   .summary-grid,
-  .filters {
+  .filters,
+  .charts-grid,
+  .donut-layout {
     grid-template-columns: 1fr;
   }
 }

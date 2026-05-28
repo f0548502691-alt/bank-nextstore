@@ -11,13 +11,21 @@ import {
 import { BankBalanceFilterForm } from './features/dashboard/models/bank-balance-filter.model';
 import { BalanceTableComponent } from './features/dashboard/components/balance-table/balance-table.component';
 import { BankBalancesApiService } from './features/dashboard/services/bank-balances-api.service';
+import { ChartsPanelComponent } from './features/dashboard/components/charts-panel/charts-panel.component';
 import { FilterPanelComponent } from './features/dashboard/components/filter-panel/filter-panel.component';
 import { SortOption } from './features/dashboard/models/sort-option.model';
 import { SummaryCardsComponent } from './features/dashboard/components/summary-cards/summary-cards.component';
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule, FormsModule, SummaryCardsComponent, FilterPanelComponent, BalanceTableComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    SummaryCardsComponent,
+    ChartsPanelComponent,
+    FilterPanelComponent,
+    BalanceTableComponent,
+  ],
   templateUrl: './app.html',
   styleUrl: './app.css',
   encapsulation: ViewEncapsulation.None,
