@@ -19,6 +19,11 @@ export interface BankBalanceSummary {
 export interface BankBalanceListResponse {
   items: BankBalance[];
   totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
   summary: BankBalanceSummary;
 }
 

@@ -12,7 +12,7 @@ public sealed class GetBankBalancesQueryHandlerTests
         var handler = new GetBankBalancesQueryHandler(new InMemoryBankBalanceReadRepository(TestBalances));
 
         var response = await handler.Handle(
-            new GetBankBalancesQuery("מניות", null, null, null, null, null, null),
+            CreateQuery(search: "מניות"),
             CancellationToken.None);
 
         Assert.Single(response.Items);
@@ -25,7 +25,7 @@ public sealed class GetBankBalancesQueryHandlerTests
         var handler = new GetBankBalancesQueryHandler(new InMemoryBankBalanceReadRepository(TestBalances));
 
         var response = await handler.Handle(
-            new GetBankBalancesQuery(null, null, "ILS", null, "פעיל", 100m, 300m),
+            CreateQuery(currency: "ILS", status: "פעיל", minAmount: 100m, maxAmount: 300m),
             CancellationToken.None);
 
         var item = Assert.Single(response.Items);
@@ -39,10 +39,46 @@ public sealed class GetBankBalancesQueryHandlerTests
         var handler = new GetBankBalancesQueryHandler(new InMemoryBankBalanceReadRepository(TestBalances));
 
         var response = await handler.Handle(
-            new GetBankBalancesQuery(null, null, null, null, null, null, null),
+            CreateQuery(),
             CancellationToken.None);
 
         Assert.Equal([3, 2, 1], response.Items.Select(item => item.Id));
+    }
+
+    [Fact]
+    public async Task Handle_ReturnsRequestedPageAndPagingMetadata()
+    {
+        var handler = new GetBankBalancesQueryHandler(new InMemoryBankBalanceReadRepository(TestBalances));
+
+        var response = await handler.Handle(
+            CreateQuery(page: 2, pageSize: 1),
+            CancellationToken.None);
+
+        var item = Assert.Single(response.Items);
+        Assert.Equal(2, item.Id);
+        Assert.Equal(3, response.TotalCount);
+        Assert.Equal(2, response.Page);
+        Assert.Equal(1, response.PageSize);
+        Assert.Equal(3, response.TotalPages);
+        Assert.True(response.HasPreviousPage);
+        Assert.True(response.HasNextPage);
+    }
+
+    [Fact]
+    public async Task Handle_ClampsPageWhenRequestedPageIsBeyondResults()
+    {
+        var handler = new GetBankBalancesQueryHandler(new InMemoryBankBalanceReadRepository(TestBalances));
+
+        var response = await handler.Handle(
+            CreateQuery(page: 99, pageSize: 2),
+            CancellationToken.None);
+
+        var item = Assert.Single(response.Items);
+        Assert.Equal(1, item.Id);
+        Assert.Equal(2, response.Page);
+        Assert.Equal(2, response.TotalPages);
+        Assert.True(response.HasPreviousPage);
+        Assert.False(response.HasNextPage);
     }
 
     private static readonly IReadOnlyList<BankBalance> TestBalances =
@@ -51,6 +87,18 @@ public sealed class GetBankBalancesQueryHandlerTests
         new(2, new DateOnly(2026, 1, 28), "דיסקונט", "422739", "מניות", "ILS", 200m, "פעיל"),
         new(3, new DateOnly(2026, 1, 28), "בינלאומי", "482229", "פיקדן קצוב - ריבית", "EUR", 500m, "חסום")
     ];
+
+    private static GetBankBalancesQuery CreateQuery(
+        string? search = null,
+        string? bankName = null,
+        string? currency = null,
+        string? balanceType = null,
+        string? status = null,
+        decimal? minAmount = null,
+        decimal? maxAmount = null,
+        int page = 1,
+        int pageSize = 50) =>
+        new(search, bankName, currency, balanceType, status, minAmount, maxAmount, page, pageSize);
 
     private sealed class InMemoryBankBalanceReadRepository(IReadOnlyList<BankBalance> balances) : IBankBalanceReadRepository
     {

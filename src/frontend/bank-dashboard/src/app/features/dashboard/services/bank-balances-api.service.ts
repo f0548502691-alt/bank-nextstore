@@ -33,6 +33,8 @@ export class BankBalancesApiService {
     params = this.appendString(params, 'status', filters.status);
     params = this.appendNumber(params, 'minAmount', filters.minAmount);
     params = this.appendNumber(params, 'maxAmount', filters.maxAmount);
+    params = this.appendNumber(params, 'page', filters.page);
+    params = this.appendNumber(params, 'pageSize', filters.pageSize);
 
     return params;
   }

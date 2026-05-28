@@ -41,7 +41,7 @@
   </section>
 
   <section class="panel">
-    <form class="filters" (ngSubmit)="loadBalances()">
+    <form class="filters" (ngSubmit)="applyFilters()">
       <label>
         חיפוש חופשי
         <input
@@ -118,7 +118,9 @@
   <section class="panel table-panel">
     <div class="table-header">
       <h2>תנועות יתרה</h2>
-      <span>{{ balances().length | number }} תוצאות מוצגות</span>
+      <span>
+        מציג {{ balances().length | number }} מתוך {{ totalCount() | number }} תוצאות
+      </span>
     </div>
 
     @if (loading()) {
@@ -155,6 +157,44 @@
             }
           </tbody>
         </table>
+      </div>
+
+      <div class="pagination-bar" aria-label="ניווט בין עמודים">
+        <div class="page-size-control">
+          <label>
+            גודל עמוד
+            <select
+              name="pageSize"
+              [ngModel]="pageSize()"
+              (ngModelChange)="changePageSize($event)"
+              [disabled]="loading()"
+            >
+              @for (option of pageSizeOptions; track option) {
+                <option [ngValue]="option">{{ option }}</option>
+              }
+            </select>
+          </label>
+        </div>
+
+        <div class="pagination-actions">
+          <button
+            type="button"
+            class="secondary-button"
+            (click)="goToPreviousPage()"
+            [disabled]="loading() || !hasPreviousPage()"
+          >
+            הקודם
+          </button>
+          <span>עמוד {{ page() | number }} מתוך {{ totalPages() | number }}</span>
+          <button
+            type="button"
+            class="secondary-button"
+            (click)="goToNextPage()"
+            [disabled]="loading() || !hasNextPage()"
+          >
+            הבא
+          </button>
+        </div>
       </div>
     }
   </section>

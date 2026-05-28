@@ -10,4 +10,6 @@ public sealed record GetBankBalancesQuery(
     string? BalanceType,
     string? Status,
     decimal? MinAmount,
-    decimal? MaxAmount) : IRequest<BankBalanceListResponse>;
+    decimal? MaxAmount,
+    int Page,
+    int PageSize) : IRequest<BankBalanceListResponse>;

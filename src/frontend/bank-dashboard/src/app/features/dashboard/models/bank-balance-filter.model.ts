@@ -6,4 +6,6 @@ export interface BankBalanceFilterForm {
   status: string;
   minAmount: number | null;
   maxAmount: number | null;
+  page: number;
+  pageSize: number;
 }

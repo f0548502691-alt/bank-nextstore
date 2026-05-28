@@ -218,6 +218,32 @@ th {
   font-weight: 700;
 }
 
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 24px;
+  border-top: 1px solid #e5edf7;
+  background: #fbfdff;
+}
+
+.page-size-control label {
+  align-items: center;
+  flex-direction: row;
+  font-weight: 700;
+}
+
+.page-size-control select {
+  min-width: 96px;
+}
+
+.pagination-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 @media (max-width: 1100px) {
   .summary-grid,
   .filters {
@@ -231,7 +257,8 @@ th {
   }
 
   .hero,
-  .table-header {
+  .table-header,
+  .pagination-bar {
     align-items: stretch;
     flex-direction: column;
   }

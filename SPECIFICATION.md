@@ -43,7 +43,7 @@
 - ללא הזדהות והרשאות.
 - ללא בסיס נתונים אמיתי בשלב הראשון.
 - ללא persistence של שינויים מצד המשתמש.
-- ללא pagination בצד שרת אם כמות הנתונים קטנה, אך התכנון יאפשר הרחבה.
+- כולל pagination בצד שרת כבר בשלב הדמו, כדי שה-UI וה-API יהיו מוכנים לכמויות נתונים גדולות.
 - ולידציה בסיסית לקלטי סינון וחיפוש.
 
 ## נתוני דמו
@@ -88,7 +88,7 @@
   - מספר בנקים ייחודיים.
   - תאריך עדכון אחרון במערכת.
 - אזור חיפוש וסינון.
-- טבלת יתרות.
+- טבלת יתרות עם pagination.
 - מצב ריק כאשר אין תוצאות.
 - הודעת שגיאה ידידותית במקרה של כשל בטעינת נתונים.
 
@@ -124,6 +124,27 @@
 הרחבה אפשרית:
 
 - מיון לפי כל עמודה מרכזית באמצעות פרמטרים ב-API.
+
+### Pagination
+
+כדי לתמוך בעתיד בכמויות נתונים גדולות, ה-API לא יחזיר את כל הנתונים כברירת מחדל אלא עמוד אחד בכל קריאה.
+
+פרמטרים:
+
+- `page` - מספר עמוד, מתחיל ב-`1`.
+- `pageSize` - כמות רשומות בעמוד, ברירת מחדל `50`, מקסימום `500`.
+
+ה-response יכלול:
+
+- `items` - הרשומות בעמוד הנוכחי.
+- `totalCount` - סך הרשומות אחרי סינון.
+- `page`
+- `pageSize`
+- `totalPages`
+- `hasPreviousPage`
+- `hasNextPage`
+
+במקור JSON קטן ה-pagination מתבצע לאחר סינון ומיון בזיכרון. כאשר מקור הנתונים יעבור ל-DB, אותו contract יישמר אבל היישום יעבור ל-query עם `Skip`/`Take` או cursor/keyset pagination בהתאם לצורך.
 
 ## ארכיטקטורת Backend
 
@@ -207,6 +228,8 @@ GET /api/bank-balances/filters
 - `status`
 - `minAmount`
 - `maxAmount`
+- `page`
+- `pageSize`
 
 ## MediatR ו-CQRS
 
@@ -318,7 +341,7 @@ features/dashboard/
 ### Get balances
 
 ```http
-GET /api/bank-balances?search=דיסקונט&currency=ILS&minAmount=0
+GET /api/bank-balances?search=דיסקונט&currency=ILS&minAmount=0&page=1&pageSize=50
 ```
 
 Response:
@@ -338,6 +361,11 @@ Response:
     }
   ],
   "totalCount": 1,
+  "page": 1,
+  "pageSize": 50,
+  "totalPages": 1,
+  "hasPreviousPage": false,
+  "hasNextPage": false,
   "summary": {
     "totalCount": 1,
     "bankCount": 1,
@@ -424,11 +452,12 @@ docker compose up --build
 - ה-API stateless ברמת request.
 - `JsonBankBalanceReadRepository` רשום כ-Singleton וטוען את קובץ ה-JSON דרך `Lazy<Task<IReadOnlyList<BankBalance>>>`.
 - אם כמה קריאות מגיעות יחד לפני סיום הטעינה הראשונה, כולן ממתינות לאותה משימת טעינה במקום לבצע קריאות דיסק כפולות.
-- לאחר הטעינה, הקריאות עובדות מול רשימה immutable בפועל, והסינון מתבצע בזיכרון לכל request.
+- לאחר הטעינה, הקריאות עובדות מול רשימה immutable בפועל, והסינון והמיון מתבצעים בזיכרון לכל request.
+- ה-response מחזיר רק עמוד אחד של נתונים כדי למנוע עומס מיותר על הרשת ועל רינדור הטבלה.
 
 ### ביצועי קריאת הקובץ
 
-קובץ של 5,000 רשומות הוא קטן יחסית. הקריאה האיטית ביותר היא הטעינה הראשונה מהדיסק וה-deserialization, ולאחר מכן אין קריאה חוזרת לקובץ. אם כמות הנתונים תגדל משמעותית, נקודות ההרחבה הטבעיות הן pagination, מעבר ל-DB, cache מנוהל או טעינה ברקע.
+קובץ של 5,000 רשומות הוא קטן יחסית. הקריאה האיטית ביותר היא הטעינה הראשונה מהדיסק וה-deserialization, ולאחר מכן אין קריאה חוזרת לקובץ. כבר קיים pagination בצד שרת, אך עבור כמויות עצומות מקור הנתונים יצטרך לעבור ל-DB או search/index store, כך שהסינון, המיון וה-pagination יתבצעו בשאילתה עצמה ולא בזיכרון של שרת האפליקציה.
 
 ### Factory
 
@@ -465,7 +494,6 @@ docker compose up --build
 
 ## החלטות פתוחות
 
-- האם להוסיף pagination בצד שרת כאשר כמות הנתונים תגדל.
 - האם להוסיף sorting דינמי לפי עמודות.
 - האם להעביר את כתובת ה-API ב-Frontend לקובץ environment/config במקום proxy יחסי.
 
@@ -476,3 +504,4 @@ docker compose up --build
 | 2026-05-28 | יצירת אפיון ראשוני | תכנון Dashboard ליתרות בנק לפי דרישות המטלה, כולל Clean Architecture, MediatR, Angular 20 ו-.NET 10 |
 | 2026-05-28 | תחילת מימוש Backend ו-Frontend לפי קובץ JSON בפועל | התאמת האפיון לשדות `date`, `balanceType`, `amount`, `status`; הוספת API, repository, queries, בדיקות יחידה ראשוניות ומסך Dashboard |
 | 2026-05-28 | הוספת Docker ותיעוד החלטות הרחבה | תמיכה בהרצה מלאה עם Docker Compose והבהרת concurrency, factory, שימוש בפיצ'רים חדשים והפרדה בין שכבות |
+| 2026-05-28 | הוספת pagination בצד שרת ובמסך | הכנת חוזה ה-API וה-UI לכמויות נתונים גדולות והפחתת עומס רינדור/רשת |

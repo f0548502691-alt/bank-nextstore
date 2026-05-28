@@ -24,11 +24,23 @@ public sealed class GetBankBalancesQueryHandler(IBankBalanceReadRepository repos
             .ThenByDescending(balance => balance.Id)
             .ToArray();
 
-        var items = filtered.Select(ToDto).ToArray();
+        var totalCount = filtered.Length;
+        var totalPages = totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)request.PageSize);
+        var page = totalPages == 0 ? 1 : Math.Min(request.Page, totalPages);
+        var items = filtered
+            .Skip((page - 1) * request.PageSize)
+            .Take(request.PageSize)
+            .Select(ToDto)
+            .ToArray();
 
         return new BankBalanceListResponse(
             items,
-            items.Length,
+            totalCount,
+            page,
+            request.PageSize,
+            totalPages,
+            page > 1,
+            totalPages > 0 && page < totalPages,
             BuildSummary(filtered));
     }
 

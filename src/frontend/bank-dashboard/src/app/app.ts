@@ -30,6 +30,13 @@ export class App implements OnInit {
   protected readonly summary = signal<BankBalanceSummary | null>(null);
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
+  protected readonly page = signal(1);
+  protected readonly pageSize = signal(50);
+  protected readonly totalPages = signal(0);
+  protected readonly totalCount = signal(0);
+  protected readonly hasPreviousPage = signal(false);
+  protected readonly hasNextPage = signal(false);
+  protected readonly pageSizeOptions = [25, 50, 100, 250, 500];
   protected readonly currencyTotals = computed(() =>
     Object.entries(this.summary()?.totalAmountByCurrency ?? {})
   );
@@ -44,6 +51,8 @@ export class App implements OnInit {
   protected loadBalances(): void {
     this.loading.set(true);
     this.error.set(null);
+    this.filterModel.page = this.page();
+    this.filterModel.pageSize = this.pageSize();
 
     this.bankBalancesApi
       .getBalances(this.filterModel)
@@ -52,17 +61,58 @@ export class App implements OnInit {
         next: (response) => {
           this.balances.set(response.items);
           this.summary.set(response.summary);
+          this.page.set(response.page);
+          this.pageSize.set(response.pageSize);
+          this.totalPages.set(response.totalPages);
+          this.totalCount.set(response.totalCount);
+          this.hasPreviousPage.set(response.hasPreviousPage);
+          this.hasNextPage.set(response.hasNextPage);
         },
         error: () => {
           this.balances.set([]);
           this.summary.set(null);
+          this.totalPages.set(0);
+          this.totalCount.set(0);
+          this.hasPreviousPage.set(false);
+          this.hasNextPage.set(false);
           this.error.set('לא ניתן לטעון את נתוני היתרות כרגע. נסו שוב מאוחר יותר.');
         },
       });
   }
 
+  protected applyFilters(): void {
+    this.page.set(1);
+    this.loadBalances();
+  }
+
   protected clearFilters(): void {
     this.filterModel = this.createEmptyFilters();
+    this.page.set(1);
+    this.pageSize.set(this.filterModel.pageSize);
+    this.loadBalances();
+  }
+
+  protected changePageSize(pageSize: number): void {
+    this.pageSize.set(Number(pageSize));
+    this.page.set(1);
+    this.loadBalances();
+  }
+
+  protected goToPreviousPage(): void {
+    if (!this.hasPreviousPage()) {
+      return;
+    }
+
+    this.page.update((currentPage) => currentPage - 1);
+    this.loadBalances();
+  }
+
+  protected goToNextPage(): void {
+    if (!this.hasNextPage()) {
+      return;
+    }
+
+    this.page.update((currentPage) => currentPage + 1);
     this.loadBalances();
   }
 
@@ -82,6 +132,8 @@ export class App implements OnInit {
       status: '',
       minAmount: null,
       maxAmount: null,
+      page: 1,
+      pageSize: 50,
     };
   }
 }

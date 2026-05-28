@@ -9,6 +9,10 @@ namespace BankDashboard.Api.Controllers;
 [Route("api/bank-balances")]
 public sealed class BankBalancesController(ISender sender) : ControllerBase
 {
+    private const int DefaultPage = 1;
+    private const int DefaultPageSize = 50;
+    private const int MaxPageSize = 500;
+
     [HttpGet]
     [ProducesResponseType<BankBalanceListResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -20,16 +24,32 @@ public sealed class BankBalancesController(ISender sender) : ControllerBase
         [FromQuery] string? status,
         [FromQuery] decimal? minAmount,
         [FromQuery] decimal? maxAmount,
+        [FromQuery] int page = DefaultPage,
+        [FromQuery] int pageSize = DefaultPageSize,
         CancellationToken cancellationToken)
     {
         if (minAmount is not null && maxAmount is not null && minAmount > maxAmount)
         {
             ModelState.AddModelError(nameof(minAmount), "minAmount cannot be greater than maxAmount.");
+        }
+
+        if (page < 1)
+        {
+            ModelState.AddModelError(nameof(page), "page must be greater than or equal to 1.");
+        }
+
+        if (pageSize is < 1 or > MaxPageSize)
+        {
+            ModelState.AddModelError(nameof(pageSize), $"pageSize must be between 1 and {MaxPageSize}.");
+        }
+
+        if (!ModelState.IsValid)
+        {
             return ValidationProblem(ModelState);
         }
 
         var response = await sender.Send(
-            new GetBankBalancesQuery(search, bankName, currency, balanceType, status, minAmount, maxAmount),
+            new GetBankBalancesQuery(search, bankName, currency, balanceType, status, minAmount, maxAmount, page, pageSize),
             cancellationToken);
 
         return Ok(response);
