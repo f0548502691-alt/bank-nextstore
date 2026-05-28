@@ -24,9 +24,9 @@ public sealed class BankBalancesController(ISender sender) : ControllerBase
         [FromQuery] string? status,
         [FromQuery] decimal? minAmount,
         [FromQuery] decimal? maxAmount,
+        CancellationToken cancellationToken,
         [FromQuery] int page = DefaultPage,
-        [FromQuery] int pageSize = DefaultPageSize,
-        CancellationToken cancellationToken)
+        [FromQuery] int pageSize = DefaultPageSize)
     {
         if (minAmount is not null && maxAmount is not null && minAmount > maxAmount)
         {
