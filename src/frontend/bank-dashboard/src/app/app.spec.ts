@@ -112,4 +112,62 @@ describe('App', () => {
       },
     });
   }));
+
+  it('should bypass cached responses when refreshing data', () => {
+    const fixture = TestBed.createComponent(App);
+    const http = TestBed.inject(HttpTestingController);
+    const component = fixture.componentInstance as unknown as { refreshData: () => void };
+
+    fixture.detectChanges();
+    http.expectOne('/api/bank-balances/filters').flush({
+      banks: [],
+      currencies: [],
+      balanceTypes: [],
+      statuses: [],
+    });
+    http.expectOne('/api/bank-balances?page=1&pageSize=50&sortBy=date&sortDirection=desc').flush({
+      items: [],
+      totalCount: 0,
+      page: 1,
+      pageSize: 50,
+      totalPages: 0,
+      hasPreviousPage: false,
+      hasNextPage: false,
+      summary: {
+        totalCount: 0,
+        bankCount: 0,
+        latestDate: null,
+        totalAmountByCurrency: {},
+      },
+    });
+
+    component.refreshData();
+
+    const filtersRequest = http.expectOne('/api/bank-balances/filters');
+    expect(filtersRequest.request.url).toBe('/api/bank-balances/filters');
+    filtersRequest.flush({
+      banks: [],
+      currencies: [],
+      balanceTypes: [],
+      statuses: [],
+    });
+
+    const balancesRequest = http.expectOne('/api/bank-balances?page=1&pageSize=50&sortBy=date&sortDirection=desc');
+    expect(balancesRequest.request.url).toBe('/api/bank-balances');
+    balancesRequest.flush({
+      items: [],
+      totalCount: 0,
+      page: 1,
+      pageSize: 50,
+      totalPages: 0,
+      hasPreviousPage: false,
+      hasNextPage: false,
+      summary: {
+        totalCount: 0,
+        bankCount: 0,
+        latestDate: null,
+        totalAmountByCurrency: {},
+      },
+    });
+  });
 });
