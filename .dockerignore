@@ -1,0 +1,11 @@
+.git/
+.github/
+**/bin/
+**/obj/
+**/node_modules/
+**/.angular/
+**/dist/
+**/coverage/
+**/.DS_Store
+**/*.user
+**/*.suo

@@ -382,9 +382,7 @@ Response:
   - שגיאת API.
   - responsive layout בסיסי.
 
-## הוראות הרצה מתוכננות
-
-הוראות אלה יעודכנו לאחר יצירת הפרויקטים בפועל.
+## הוראות הרצה
 
 ### Backend
 
@@ -408,6 +406,49 @@ npm start
 - Frontend: `http://localhost:4200`
 - OpenAPI: `/swagger` או endpoint OpenAPI מקביל בהתאם להגדרת .NET 10
 
+### Docker Compose
+
+```bash
+docker compose up --build
+```
+
+- Frontend: `http://localhost:4200`
+- Backend API: `http://localhost:5000/api/bank-balances`
+
+ה-Frontend נבנה כקבצים סטטיים ומוגש על ידי Nginx. קריאות `/api` עוברות מ-Nginx לשירות ה-backend בתוך רשת ה-Compose.
+
+## החלטות מימוש ויכולת הרחבה
+
+### ריבוי קריאות במקביל
+
+- ה-API stateless ברמת request.
+- `JsonBankBalanceReadRepository` רשום כ-Singleton וטוען את קובץ ה-JSON דרך `Lazy<Task<IReadOnlyList<BankBalance>>>`.
+- אם כמה קריאות מגיעות יחד לפני סיום הטעינה הראשונה, כולן ממתינות לאותה משימת טעינה במקום לבצע קריאות דיסק כפולות.
+- לאחר הטעינה, הקריאות עובדות מול רשימה immutable בפועל, והסינון מתבצע בזיכרון לכל request.
+
+### ביצועי קריאת הקובץ
+
+קובץ של 5,000 רשומות הוא קטן יחסית. הקריאה האיטית ביותר היא הטעינה הראשונה מהדיסק וה-deserialization, ולאחר מכן אין קריאה חוזרת לקובץ. אם כמות הנתונים תגדל משמעותית, נקודות ההרחבה הטבעיות הן pagination, מעבר ל-DB, cache מנוהל או טעינה ברקע.
+
+### Factory
+
+בשלב הנוכחי אין צורך ב-Factory: קיימת תשתית אחת ברורה לקריאת נתונים, וה-DI מחבר abstraction ל-implementation. Factory יהיה מוצדק אם יתווספו כמה מקורות נתונים, בחירה דינמית לפי tenant, קבצים שונים לפי סביבה, או אסטרטגיות parsing שונות.
+
+### שימוש בפיצ'רים חדשים
+
+- Angular: standalone component, `inject`, Signals, `computed`, control flow חדש עם `@if` / `@for`, ו-`provideHttpClient`.
+- .NET: target ל-`.NET 10`, minimal hosting model, records immutable, primary constructors, `DateOnly`, async APIs ו-DI מובנה.
+
+### הפרדה בין שכבות וצימוד
+
+- `Domain` מכיל מודל עסקי נקי ללא תלות בתשתיות.
+- `Application` מכיל DTOs, queries, handlers ו-abstractions.
+- `Infrastructure` מממש את הקריאה מה-JSON דרך abstraction של Application.
+- `Api` מכיר את Application ו-Infrastructure לצורך composition root בלבד.
+- Frontend מבודד את חוזה ה-API ב-service וב-models.
+
+הצימוד המרכזי שנותר הוא חוזה ה-DTO בין API ל-Frontend ושמות שדות ה-JSON בתוך ה-repository. זה צימוד סביר לשלב הדמו, וניתן להרחבה באמצעות mapping/versioning אם החוזה יהפוך ציבורי או יציב לאורך זמן.
+
 ## שימוש ב-AI במהלך הפיתוח
 
 כלי AI בשימוש:
@@ -424,10 +465,9 @@ npm start
 
 ## החלטות פתוחות
 
-- התאמת שמות שדות למבנה המדויק של קובץ ה-JSON שיצורף.
-- בחירה בין Controllers לבין Minimal APIs ב-.NET 10.
-- בחירה בין CSS פשוט, SCSS או ספריית UI קלה ל-Angular.
-- האם לבצע סינון בצד שרת בלבד או לשלב סינון client-side לאחר טעינה ראשונית.
+- האם להוסיף pagination בצד שרת כאשר כמות הנתונים תגדל.
+- האם להוסיף sorting דינמי לפי עמודות.
+- האם להעביר את כתובת ה-API ב-Frontend לקובץ environment/config במקום proxy יחסי.
 
 ## יומן שינויים
 
@@ -435,3 +475,4 @@ npm start
 | --- | --- | --- |
 | 2026-05-28 | יצירת אפיון ראשוני | תכנון Dashboard ליתרות בנק לפי דרישות המטלה, כולל Clean Architecture, MediatR, Angular 20 ו-.NET 10 |
 | 2026-05-28 | תחילת מימוש Backend ו-Frontend לפי קובץ JSON בפועל | התאמת האפיון לשדות `date`, `balanceType`, `amount`, `status`; הוספת API, repository, queries, בדיקות יחידה ראשוניות ומסך Dashboard |
+| 2026-05-28 | הוספת Docker ותיעוד החלטות הרחבה | תמיכה בהרצה מלאה עם Docker Compose והבהרת concurrency, factory, שימוש בפיצ'רים חדשים והפרדה בין שכבות |

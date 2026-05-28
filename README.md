@@ -45,6 +45,21 @@ npm start
 
 שרת הפיתוח של Angular משתמש ב-`proxy.conf.json` ומעביר קריאות `/api` אל `http://localhost:5000`.
 
+## הרצה עם Docker Compose
+
+נדרש Docker עם Compose plugin.
+
+```bash
+docker compose up --build
+```
+
+כתובות:
+
+- Frontend: `http://localhost:4200`
+- Backend API: `http://localhost:5000/api/bank-balances`
+
+במצב Docker, Nginx משרת את קבצי ה-Angular ומעביר קריאות `/api` לשירות ה-backend בתוך רשת ה-Compose.
+
 ## בדיקות
 
 ```bash
