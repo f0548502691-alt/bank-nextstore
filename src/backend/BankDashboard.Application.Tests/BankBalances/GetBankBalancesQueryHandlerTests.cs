@@ -81,6 +81,18 @@ public sealed class GetBankBalancesQueryHandlerTests
         Assert.False(response.HasNextPage);
     }
 
+    [Fact]
+    public async Task Handle_AppliesRequestedSort()
+    {
+        var handler = new GetBankBalancesQueryHandler(new InMemoryBankBalanceReadRepository(TestBalances));
+
+        var response = await handler.Handle(
+            CreateQuery(sortBy: "amount", sortDirection: "asc"),
+            CancellationToken.None);
+
+        Assert.Equal([1, 2, 3], response.Items.Select(item => item.Id));
+    }
+
     private static readonly IReadOnlyList<BankBalance> TestBalances =
     [
         new(1, new DateOnly(2025, 1, 8), "דיסקונט", "237167", "יתרת עו\"ש", "USD", 50m, "פעיל"),
@@ -97,8 +109,10 @@ public sealed class GetBankBalancesQueryHandlerTests
         decimal? minAmount = null,
         decimal? maxAmount = null,
         int page = 1,
-        int pageSize = 50) =>
-        new(search, bankName, currency, balanceType, status, minAmount, maxAmount, page, pageSize);
+        int pageSize = 50,
+        string? sortBy = "date",
+        string? sortDirection = "desc") =>
+        new(search, bankName, currency, balanceType, status, minAmount, maxAmount, page, pageSize, sortBy, sortDirection);
 
     private sealed class InMemoryBankBalanceReadRepository(IReadOnlyList<BankBalance> balances) : IBankBalanceReadRepository
     {

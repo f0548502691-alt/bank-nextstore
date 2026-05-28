@@ -117,13 +117,9 @@
 
 ### מיון
 
-בשלב ראשון:
-
 - מיון ברירת מחדל לפי `date` בסדר יורד ולאחר מכן `id` בסדר יורד.
-
-הרחבה אפשרית:
-
-- מיון לפי כל עמודה מרכזית באמצעות פרמטרים ב-API.
+- מיון בצד שרת לפי whitelist של שדות: `id`, `date`, `bankName`, `accountNumber`, `balanceType`, `currency`, `amount`, `status`.
+- כיוון מיון נתמך: `asc` או `desc`.
 
 ### Pagination
 
@@ -140,11 +136,13 @@
 - `totalCount` - סך הרשומות אחרי סינון.
 - `page`
 - `pageSize`
+- `sortBy`
+- `sortDirection`
 - `totalPages`
 - `hasPreviousPage`
 - `hasNextPage`
 
-במקור JSON קטן ה-pagination מתבצע לאחר סינון ומיון בזיכרון. כאשר מקור הנתונים יעבור ל-DB, אותו contract יישמר אבל היישום יעבור ל-query עם `Skip`/`Take` או cursor/keyset pagination בהתאם לצורך.
+במקור JSON קטן הסינון, המיון וה-pagination מתבצעים לאחר טעינה לזיכרון. כאשר מקור הנתונים יעבור ל-DB, אותו contract יישמר אבל היישום יעבור ל-query עם `Where`, `OrderBy`, `Skip`/`Take` או cursor/keyset pagination בהתאם לצורך.
 
 ## ארכיטקטורת Backend
 
@@ -341,7 +339,7 @@ features/dashboard/
 ### Get balances
 
 ```http
-GET /api/bank-balances?search=דיסקונט&currency=ILS&minAmount=0&page=1&pageSize=50
+GET /api/bank-balances?search=דיסקונט&currency=ILS&minAmount=0&page=1&pageSize=50&sortBy=date&sortDirection=desc
 ```
 
 Response:
@@ -463,6 +461,24 @@ docker compose up --build
 
 בשלב הנוכחי אין צורך ב-Factory: קיימת תשתית אחת ברורה לקריאת נתונים, וה-DI מחבר abstraction ל-implementation. Factory יהיה מוצדק אם יתווספו כמה מקורות נתונים, בחירה דינמית לפי tenant, קבצים שונים לפי סביבה, או אסטרטגיות parsing שונות.
 
+### ולידציות ושגיאות
+
+- ולידציית query parameters מתבצעת ב-API Controller: טווח סכומים, `page`, `pageSize`, `sortBy`, `sortDirection`.
+- ולידציית מבנה JSON מתבצעת ב-`JsonBankBalanceReadRepository`: שדות חובה, פורמט תאריך, id חיובי וזיהוי כפילויות id.
+- שגיאות שרת מוחזרות כ-ProblemDetails עם `traceId`.
+- בצד הלקוח קיים HTTP interceptor שמרכז טיפול בשגיאות API ומייצר הודעה ידידותית למשתמש.
+
+### לוגים
+
+- השרת משתמש ב-Serilog ל-structured logging.
+- כל request נרשם דרך `UseSerilogRequestLogging`.
+- טעינת קובץ ה-JSON נרשמת עם נתיב וכמות רשומות.
+
+### קונפיגורציה
+
+- ה-Frontend משתמש בקובצי `environment.ts` / `environment.development.ts` עבור `apiBaseUrl`.
+- ב-Docker ובפיתוח מקומי `apiBaseUrl` נשאר יחסי (`/api`) כדי לאפשר proxy דרך Angular dev server או Nginx.
+
 ### שימוש בפיצ'רים חדשים
 
 - Angular: standalone component, `inject`, Signals, `computed`, control flow חדש עם `@if` / `@for`, ו-`provideHttpClient`.
@@ -494,8 +510,8 @@ docker compose up --build
 
 ## החלטות פתוחות
 
-- האם להוסיף sorting דינמי לפי עמודות.
-- האם להעביר את כתובת ה-API ב-Frontend לקובץ environment/config במקום proxy יחסי.
+- האם לעבור בעתיד ל-cursor/keyset pagination במקום page/pageSize.
+- האם להוסיף OpenTelemetry להפצת trace בין Frontend, Nginx ו-Backend.
 
 ## יומן שינויים
 
@@ -505,3 +521,4 @@ docker compose up --build
 | 2026-05-28 | תחילת מימוש Backend ו-Frontend לפי קובץ JSON בפועל | התאמת האפיון לשדות `date`, `balanceType`, `amount`, `status`; הוספת API, repository, queries, בדיקות יחידה ראשוניות ומסך Dashboard |
 | 2026-05-28 | הוספת Docker ותיעוד החלטות הרחבה | תמיכה בהרצה מלאה עם Docker Compose והבהרת concurrency, factory, שימוש בפיצ'רים חדשים והפרדה בין שכבות |
 | 2026-05-28 | הוספת pagination בצד שרת ובמסך | הכנת חוזה ה-API וה-UI לכמויות נתונים גדולות והפחתת עומס רינדור/רשת |
+| 2026-05-28 | הוספת sorting, ולידציות JSON, interceptor ולוגים אחידים | חיזוק חוויית תפעול ופיתוח תוך שמירה על מקור נתונים JSON בשלב הדמו |

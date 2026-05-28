@@ -20,14 +20,13 @@ public sealed class GetBankBalancesQueryHandler(IBankBalanceReadRepository repos
             .Where(balance => MatchesExact(balance.Status, request.Status))
             .Where(balance => request.MinAmount is null || balance.Amount >= request.MinAmount.Value)
             .Where(balance => request.MaxAmount is null || balance.Amount <= request.MaxAmount.Value)
-            .OrderByDescending(balance => balance.Date)
-            .ThenByDescending(balance => balance.Id)
             .ToArray();
 
+        var sorted = ApplySorting(filtered, request.SortBy, request.SortDirection).ToArray();
         var totalCount = filtered.Length;
         var totalPages = totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)request.PageSize);
         var page = totalPages == 0 ? 1 : Math.Min(request.Page, totalPages);
-        var items = filtered
+        var items = sorted
             .Skip((page - 1) * request.PageSize)
             .Take(request.PageSize)
             .Select(ToDto)
@@ -70,6 +69,32 @@ public sealed class GetBankBalancesQueryHandler(IBankBalanceReadRepository repos
 
     private static string? Normalize(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static IOrderedEnumerable<BankBalance> ApplySorting(
+        IEnumerable<BankBalance> balances,
+        string? sortBy,
+        string? sortDirection)
+    {
+        var descending = !string.Equals(sortDirection, "asc", StringComparison.OrdinalIgnoreCase);
+
+        return Normalize(sortBy)?.ToLowerInvariant() switch
+        {
+            "id" => OrderBy(balance => balance.Id, descending),
+            "date" => OrderBy(balance => balance.Date, descending),
+            "bankname" => OrderBy(balance => balance.BankName, descending),
+            "accountnumber" => OrderBy(balance => balance.AccountNumber, descending),
+            "balancetype" => OrderBy(balance => balance.BalanceType, descending),
+            "currency" => OrderBy(balance => balance.Currency, descending),
+            "amount" => OrderBy(balance => balance.Amount, descending),
+            "status" => OrderBy(balance => balance.Status, descending),
+            _ => OrderBy(balance => balance.Date, descending: true)
+        };
+
+        IOrderedEnumerable<BankBalance> OrderBy<TKey>(Func<BankBalance, TKey> keySelector, bool descending) =>
+            descending
+                ? balances.OrderByDescending(keySelector).ThenByDescending(balance => balance.Id)
+                : balances.OrderBy(keySelector).ThenBy(balance => balance.Id);
+    }
 
     private static BankBalanceSummaryDto BuildSummary(IReadOnlyCollection<BankBalance> balances)
     {

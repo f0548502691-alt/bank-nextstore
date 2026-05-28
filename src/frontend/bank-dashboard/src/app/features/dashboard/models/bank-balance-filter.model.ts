@@ -8,4 +8,6 @@ export interface BankBalanceFilterForm {
   maxAmount: number | null;
   page: number;
   pageSize: number;
+  sortBy: string;
+  sortDirection: 'asc' | 'desc';
 }

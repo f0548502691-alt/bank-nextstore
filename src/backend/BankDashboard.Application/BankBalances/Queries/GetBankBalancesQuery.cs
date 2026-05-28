@@ -12,4 +12,6 @@ public sealed record GetBankBalancesQuery(
     decimal? MinAmount,
     decimal? MaxAmount,
     int Page,
-    int PageSize) : IRequest<BankBalanceListResponse>;
+    int PageSize,
+    string? SortBy,
+    string? SortDirection) : IRequest<BankBalanceListResponse>;

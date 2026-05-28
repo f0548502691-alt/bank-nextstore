@@ -9,6 +9,18 @@ namespace BankDashboard.Api.Controllers;
 [Route("api/bank-balances")]
 public sealed class BankBalancesController(ISender sender) : ControllerBase
 {
+    private static readonly HashSet<string> AllowedSortFields = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "id",
+        "date",
+        "bankName",
+        "accountNumber",
+        "balanceType",
+        "currency",
+        "amount",
+        "status"
+    };
+
     private const int DefaultPage = 1;
     private const int DefaultPageSize = 50;
     private const int MaxPageSize = 500;
@@ -26,7 +38,9 @@ public sealed class BankBalancesController(ISender sender) : ControllerBase
         [FromQuery] decimal? maxAmount,
         CancellationToken cancellationToken,
         [FromQuery] int page = DefaultPage,
-        [FromQuery] int pageSize = DefaultPageSize)
+        [FromQuery] int pageSize = DefaultPageSize,
+        [FromQuery] string? sortBy = "date",
+        [FromQuery] string? sortDirection = "desc")
     {
         if (minAmount is not null && maxAmount is not null && minAmount > maxAmount)
         {
@@ -43,13 +57,36 @@ public sealed class BankBalancesController(ISender sender) : ControllerBase
             ModelState.AddModelError(nameof(pageSize), $"pageSize must be between 1 and {MaxPageSize}.");
         }
 
+        if (!string.IsNullOrWhiteSpace(sortBy) && !AllowedSortFields.Contains(sortBy))
+        {
+            ModelState.AddModelError(nameof(sortBy), $"sortBy must be one of: {string.Join(", ", AllowedSortFields)}.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(sortDirection)
+            && !string.Equals(sortDirection, "asc", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase))
+        {
+            ModelState.AddModelError(nameof(sortDirection), "sortDirection must be 'asc' or 'desc'.");
+        }
+
         if (!ModelState.IsValid)
         {
             return ValidationProblem(ModelState);
         }
 
         var response = await sender.Send(
-            new GetBankBalancesQuery(search, bankName, currency, balanceType, status, minAmount, maxAmount, page, pageSize),
+            new GetBankBalancesQuery(
+                search,
+                bankName,
+                currency,
+                balanceType,
+                status,
+                minAmount,
+                maxAmount,
+                page,
+                pageSize,
+                sortBy,
+                sortDirection),
             cancellationToken);
 
         return Ok(response);

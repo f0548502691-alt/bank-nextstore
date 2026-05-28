@@ -37,6 +37,15 @@ export class App implements OnInit {
   protected readonly hasPreviousPage = signal(false);
   protected readonly hasNextPage = signal(false);
   protected readonly pageSizeOptions = [25, 50, 100, 250, 500];
+  protected readonly sortOptions = [
+    { value: 'date', label: 'תאריך' },
+    { value: 'bankName', label: 'בנק' },
+    { value: 'accountNumber', label: 'מספר חשבון' },
+    { value: 'balanceType', label: 'סוג יתרה' },
+    { value: 'currency', label: 'מטבע' },
+    { value: 'amount', label: 'סכום' },
+    { value: 'status', label: 'סטטוס' },
+  ];
   protected readonly currencyTotals = computed(() =>
     Object.entries(this.summary()?.totalAmountByCurrency ?? {})
   );
@@ -68,14 +77,14 @@ export class App implements OnInit {
           this.hasPreviousPage.set(response.hasPreviousPage);
           this.hasNextPage.set(response.hasNextPage);
         },
-        error: () => {
+        error: (error: unknown) => {
           this.balances.set([]);
           this.summary.set(null);
           this.totalPages.set(0);
           this.totalCount.set(0);
           this.hasPreviousPage.set(false);
           this.hasNextPage.set(false);
-          this.error.set('לא ניתן לטעון את נתוני היתרות כרגע. נסו שוב מאוחר יותר.');
+          this.error.set(error instanceof Error ? error.message : 'לא ניתן לטעון את נתוני היתרות כרגע. נסו שוב מאוחר יותר.');
         },
       });
   }
@@ -119,7 +128,8 @@ export class App implements OnInit {
   private loadFilterOptions(): void {
     this.bankBalancesApi.getFilterOptions().subscribe({
       next: (options) => this.filterOptions.set(options),
-      error: () => this.error.set('לא ניתן לטעון את אפשרויות הסינון.'),
+      error: (error: unknown) =>
+        this.error.set(error instanceof Error ? error.message : 'לא ניתן לטעון את אפשרויות הסינון.'),
     });
   }
 
@@ -134,6 +144,8 @@ export class App implements OnInit {
       maxAmount: null,
       page: 1,
       pageSize: 50,
+      sortBy: 'date',
+      sortDirection: 'desc',
     };
   }
 }

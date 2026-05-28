@@ -32,7 +32,7 @@ describe('App', () => {
       balanceTypes: [],
       statuses: [],
     });
-    http.expectOne('/api/bank-balances?page=1&pageSize=50').flush({
+    http.expectOne('/api/bank-balances?page=1&pageSize=50&sortBy=date&sortDirection=desc').flush({
       items: [],
       totalCount: 0,
       page: 1,

@@ -7,11 +7,12 @@ import {
   BankBalanceListResponse,
 } from '../models/bank-balance.model';
 import { BankBalanceFilterForm } from '../models/bank-balance-filter.model';
+import { environment } from '../../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class BankBalancesApiService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = '/api/bank-balances';
+  private readonly baseUrl = `${environment.apiBaseUrl}/bank-balances`;
 
   getBalances(filters: BankBalanceFilterForm): Observable<BankBalanceListResponse> {
     return this.http.get<BankBalanceListResponse>(this.baseUrl, {
@@ -35,6 +36,8 @@ export class BankBalancesApiService {
     params = this.appendNumber(params, 'maxAmount', filters.maxAmount);
     params = this.appendNumber(params, 'page', filters.page);
     params = this.appendNumber(params, 'pageSize', filters.pageSize);
+    params = this.appendString(params, 'sortBy', filters.sortBy);
+    params = this.appendString(params, 'sortDirection', filters.sortDirection);
 
     return params;
   }

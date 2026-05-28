@@ -36,8 +36,11 @@ Endpoints:
 - `maxAmount`
 - `page` - ברירת מחדל `1`
 - `pageSize` - ברירת מחדל `50`, מקסימום `500`
+- `sortBy` - אחד מהשדות `id`, `date`, `bankName`, `accountNumber`, `balanceType`, `currency`, `amount`, `status`
+- `sortDirection` - `asc` או `desc`
 
 ה-API מחזיר עמוד אחד בכל קריאה יחד עם metadata: מספר עמוד, גודל עמוד, סך תוצאות, סך עמודים, והאם יש עמוד קודם/הבא.
+גם הסינון, המיון וה-pagination מתבצעים בצד שרת; בשלב הדמו מקור הנתונים נשאר JSON ונטען פעם אחת לזיכרון.
 
 ## הרצת Frontend
 

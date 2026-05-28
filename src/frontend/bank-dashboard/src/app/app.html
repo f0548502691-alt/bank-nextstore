@@ -102,6 +102,23 @@
         <input name="maxAmount" type="number" min="0" [(ngModel)]="filterModel.maxAmount" />
       </label>
 
+      <label>
+        מיון לפי
+        <select name="sortBy" [(ngModel)]="filterModel.sortBy">
+          @for (sortOption of sortOptions; track sortOption.value) {
+            <option [value]="sortOption.value">{{ sortOption.label }}</option>
+          }
+        </select>
+      </label>
+
+      <label>
+        כיוון מיון
+        <select name="sortDirection" [(ngModel)]="filterModel.sortDirection">
+          <option value="desc">יורד</option>
+          <option value="asc">עולה</option>
+        </select>
+      </label>
+
       <div class="filter-actions">
         <button type="submit" [disabled]="loading()">החלת סינון</button>
         <button type="button" class="secondary-button" (click)="clearFilters()" [disabled]="loading()">
