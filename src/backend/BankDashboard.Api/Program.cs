@@ -4,6 +4,7 @@ using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -72,6 +73,27 @@ app.UseExceptionHandler(exceptionHandlerApp =>
 
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
             await context.Response.WriteAsJsonAsync(validationProblemDetails);
+            return;
+        }
+
+        if (exception is InvalidDataException or JsonException)
+        {
+            logger.LogError(
+                exception,
+                "Configured demo data is invalid while processing {Path}",
+                context.Request.Path);
+
+            var dataProblemDetails = new ProblemDetails
+            {
+                Title = "Demo data is invalid.",
+                Detail = app.Environment.IsDevelopment() ? exception.Message : "The configured data source could not be loaded.",
+                Status = StatusCodes.Status500InternalServerError,
+                Instance = context.Request.Path
+            };
+            dataProblemDetails.Extensions["traceId"] = context.TraceIdentifier;
+
+            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+            await context.Response.WriteAsJsonAsync(dataProblemDetails);
             return;
         }
 

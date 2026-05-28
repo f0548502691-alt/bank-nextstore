@@ -4,11 +4,28 @@ Dashboard להצגת יתרות בנק מתוך קובץ JSON דמו (`bank_bala
 
 ## מבנה
 
-- `src/backend` - ASP.NET Core Web API ב-Clean Architecture עם MediatR.
+- `src/backend` - ASP.NET Core Web API ב-Clean Architecture.
 - `src/frontend/bank-dashboard` - Angular 20 standalone app.
 - `SPECIFICATION.md` - אפיון הפתרון ויומן שינויים.
 
-## הרצת Backend
+## הרצה עם Docker Compose
+
+זוהי דרך ההרצה המומלצת. נדרש Docker עם Compose plugin.
+
+```bash
+docker compose up --build
+```
+
+כתובות:
+
+- Frontend: `http://localhost:4200`
+- Backend API: `http://localhost:5000/api/bank-balances`
+
+במצב Docker, Nginx משרת את קבצי ה-Angular ומעביר קריאות `/api` לשירות ה-backend בתוך רשת ה-Compose.
+
+## הרצה ידנית לפיתוח
+
+### Backend
 
 נדרש .NET 10 SDK.
 
@@ -18,7 +35,17 @@ dotnet restore
 dotnet run --project BankDashboard.Api --urls http://localhost:5000
 ```
 
-ה-Frontend מוגדר להעביר קריאות API אל `http://localhost:5000`.
+### Frontend
+
+```bash
+cd src/frontend/bank-dashboard
+npm install
+npm start
+```
+
+שרת הפיתוח של Angular משתמש ב-`proxy.conf.json` ומעביר קריאות `/api` אל `http://localhost:5000`.
+
+## API
 
 Endpoints:
 
@@ -43,31 +70,6 @@ Endpoints:
 גם הסינון, המיון וה-pagination מתבצעים בצד שרת; בשלב הדמו מקור הנתונים נשאר JSON ונטען פעם אחת לזיכרון.
 ולידציית הפרמטרים מתבצעת בשכבת Application באמצעות FluentValidation.
 החיפוש החופשי תומך בכמה מילים על פני כמה שדות, למשל `לאומי אופציות`, וב-Frontend הוא נשלח אוטומטית אחרי השהיית הקלדה קצרה.
-
-## הרצת Frontend
-
-```bash
-cd src/frontend/bank-dashboard
-npm install
-npm start
-```
-
-שרת הפיתוח של Angular משתמש ב-`proxy.conf.json` ומעביר קריאות `/api` אל `http://localhost:5000`.
-
-## הרצה עם Docker Compose
-
-נדרש Docker עם Compose plugin.
-
-```bash
-docker compose up --build
-```
-
-כתובות:
-
-- Frontend: `http://localhost:4200`
-- Backend API: `http://localhost:5000/api/bank-balances`
-
-במצב Docker, Nginx משרת את קבצי ה-Angular ומעביר קריאות `/api` לשירות ה-backend בתוך רשת ה-Compose.
 
 ## בדיקות
 

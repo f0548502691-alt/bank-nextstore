@@ -1,6 +1,5 @@
-using BankDashboard.Application.Common.Behaviors;
+using BankDashboard.Application.BankBalances.Services;
 using FluentValidation;
-using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BankDashboard.Application;
@@ -9,10 +8,8 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
-        services.AddMediatR(configuration =>
-            configuration.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly));
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
-        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+        services.AddScoped<IBankBalancesQueryService, BankBalancesQueryService>();
 
         return services;
     }

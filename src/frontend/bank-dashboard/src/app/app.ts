@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewEncapsulation, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 
@@ -9,13 +9,18 @@ import {
   BankBalanceSummary,
 } from './features/dashboard/models/bank-balance.model';
 import { BankBalanceFilterForm } from './features/dashboard/models/bank-balance-filter.model';
+import { BalanceTableComponent } from './features/dashboard/components/balance-table/balance-table.component';
 import { BankBalancesApiService } from './features/dashboard/services/bank-balances-api.service';
+import { FilterPanelComponent } from './features/dashboard/components/filter-panel/filter-panel.component';
+import { SortOption } from './features/dashboard/models/sort-option.model';
+import { SummaryCardsComponent } from './features/dashboard/components/summary-cards/summary-cards.component';
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SummaryCardsComponent, FilterPanelComponent, BalanceTableComponent],
   templateUrl: './app.html',
-  styleUrl: './app.css'
+  styleUrl: './app.css',
+  encapsulation: ViewEncapsulation.None,
 })
 export class App implements OnInit, OnDestroy {
   private readonly bankBalancesApi = inject(BankBalancesApiService);
@@ -40,7 +45,7 @@ export class App implements OnInit, OnDestroy {
   protected readonly hasPreviousPage = signal(false);
   protected readonly hasNextPage = signal(false);
   protected readonly pageSizeOptions = [25, 50, 100, 250, 500];
-  protected readonly sortOptions = [
+  protected readonly sortOptions: readonly SortOption[] = [
     { value: 'date', label: 'תאריך' },
     { value: 'bankName', label: 'בנק' },
     { value: 'accountNumber', label: 'מספר חשבון' },

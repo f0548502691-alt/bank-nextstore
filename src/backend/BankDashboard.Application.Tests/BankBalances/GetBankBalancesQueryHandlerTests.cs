@@ -1,17 +1,18 @@
 using BankDashboard.Application.Abstractions;
 using BankDashboard.Application.BankBalances.Queries;
+using BankDashboard.Application.BankBalances.Services;
 using BankDashboard.Domain.BankBalances;
 
 namespace BankDashboard.Application.Tests.BankBalances;
 
-public sealed class GetBankBalancesQueryHandlerTests
+public sealed class BankBalancesQueryServiceTests
 {
     [Fact]
     public async Task Handle_FiltersBySearchAcrossKeyFields()
     {
-        var handler = new GetBankBalancesQueryHandler(new InMemoryBankBalanceReadRepository(TestBalances));
+        var service = CreateService(TestBalances);
 
-        var response = await handler.Handle(
+        var response = await service.GetBankBalancesAsync(
             CreateQuery(search: "מניות"),
             CancellationToken.None);
 
@@ -22,14 +23,14 @@ public sealed class GetBankBalancesQueryHandlerTests
     [Fact]
     public async Task Handle_FiltersByAllSearchTermsAcrossDifferentFields()
     {
-        var handler = new GetBankBalancesQueryHandler(new InMemoryBankBalanceReadRepository(
+        var service = CreateService(
         [
             new(10, new DateOnly(2026, 2, 1), "לאומי", "111111", "אופציות", "ILS", 100m, "פעיל"),
             new(11, new DateOnly(2026, 2, 1), "לאומי", "222222", "מניות", "ILS", 100m, "פעיל"),
             new(12, new DateOnly(2026, 2, 1), "דיסקונט", "333333", "אופציות", "ILS", 100m, "פעיל")
-        ]));
+        ]);
 
-        var response = await handler.Handle(
+        var response = await service.GetBankBalancesAsync(
             CreateQuery(search: "לאומי אופציות"),
             CancellationToken.None);
 
@@ -40,9 +41,9 @@ public sealed class GetBankBalancesQueryHandlerTests
     [Fact]
     public async Task Handle_AppliesCurrencyStatusAndAmountRangeFilters()
     {
-        var handler = new GetBankBalancesQueryHandler(new InMemoryBankBalanceReadRepository(TestBalances));
+        var service = CreateService(TestBalances);
 
-        var response = await handler.Handle(
+        var response = await service.GetBankBalancesAsync(
             CreateQuery(currency: "ILS", status: "פעיל", minAmount: 100m, maxAmount: 300m),
             CancellationToken.None);
 
@@ -54,9 +55,9 @@ public sealed class GetBankBalancesQueryHandlerTests
     [Fact]
     public async Task Handle_SortsByDateDescendingThenIdDescending()
     {
-        var handler = new GetBankBalancesQueryHandler(new InMemoryBankBalanceReadRepository(TestBalances));
+        var service = CreateService(TestBalances);
 
-        var response = await handler.Handle(
+        var response = await service.GetBankBalancesAsync(
             CreateQuery(),
             CancellationToken.None);
 
@@ -66,9 +67,9 @@ public sealed class GetBankBalancesQueryHandlerTests
     [Fact]
     public async Task Handle_ReturnsRequestedPageAndPagingMetadata()
     {
-        var handler = new GetBankBalancesQueryHandler(new InMemoryBankBalanceReadRepository(TestBalances));
+        var service = CreateService(TestBalances);
 
-        var response = await handler.Handle(
+        var response = await service.GetBankBalancesAsync(
             CreateQuery(page: 2, pageSize: 1),
             CancellationToken.None);
 
@@ -85,9 +86,9 @@ public sealed class GetBankBalancesQueryHandlerTests
     [Fact]
     public async Task Handle_ClampsPageWhenRequestedPageIsBeyondResults()
     {
-        var handler = new GetBankBalancesQueryHandler(new InMemoryBankBalanceReadRepository(TestBalances));
+        var service = CreateService(TestBalances);
 
-        var response = await handler.Handle(
+        var response = await service.GetBankBalancesAsync(
             CreateQuery(page: 99, pageSize: 2),
             CancellationToken.None);
 
@@ -102,9 +103,9 @@ public sealed class GetBankBalancesQueryHandlerTests
     [Fact]
     public async Task Handle_AppliesRequestedSort()
     {
-        var handler = new GetBankBalancesQueryHandler(new InMemoryBankBalanceReadRepository(TestBalances));
+        var service = CreateService(TestBalances);
 
-        var response = await handler.Handle(
+        var response = await service.GetBankBalancesAsync(
             CreateQuery(sortBy: "amount", sortDirection: "asc"),
             CancellationToken.None);
 
@@ -131,6 +132,9 @@ public sealed class GetBankBalancesQueryHandlerTests
         string? sortBy = "date",
         string? sortDirection = "desc") =>
         new(search, bankName, currency, balanceType, status, minAmount, maxAmount, page, pageSize, sortBy, sortDirection);
+
+    private static BankBalancesQueryService CreateService(IReadOnlyList<BankBalance> balances) =>
+        new(new InMemoryBankBalanceReadRepository(balances), new GetBankBalancesQueryValidator());
 
     private sealed class InMemoryBankBalanceReadRepository(IReadOnlyList<BankBalance> balances) : IBankBalanceReadRepository
     {

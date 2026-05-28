@@ -14,7 +14,7 @@
 - חיפוש חופשי לפי שדות מרכזיים.
 - סינון לפי מאפיינים עסקיים כגון בנק, מטבע, סוג יתרה, סטטוס וטווח סכומים.
 - הפרדה ברורה בין Backend, Frontend ושכבות פנימיות.
-- שימוש ב-Clean Architecture ובתבניות נפוצות כגון CQRS ו-MediatR.
+- שימוש ב-Clean Architecture עם Application services ו-DTOs.
 - מחשבה על איכות קוד, חוויית משתמש וחוויית פיתוח.
 
 ## טכנולוגיות יעד
@@ -24,7 +24,7 @@
 - .NET 10
 - ASP.NET Core Web API
 - Clean Architecture
-- MediatR עבור CQRS ו-decoupling בין API ל-Application layer
+- Application services עבור הפרדה בין API ל-Application layer
 - Dependency Injection מובנה של ASP.NET Core
 - טעינת Demo Data מקובץ JSON מקומי
 
@@ -178,7 +178,7 @@ BankDashboard.Api
 אחריות:
 
 - Use cases של המערכת.
-- CQRS queries.
+- Query objects ו-Application services.
 - DTOs.
 - Interfaces לשירותי תשתית.
 - לוגיקת סינון, חיפוש ומיון.
@@ -186,7 +186,7 @@ BankDashboard.Api
 דוגמאות:
 
 - `GetBankBalancesQuery`
-- `GetBankBalancesQueryHandler`
+- `BankBalancesQueryService`
 - `BankBalanceDto`
 - `IBankBalanceReadRepository`
 
@@ -208,7 +208,7 @@ BankDashboard.Api
 אחריות:
 
 - הגדרת endpoints.
-- תרגום HTTP requests ל-MediatR requests.
+- תרגום HTTP requests ל-query objects והעברתם ל-Application services.
 - Swagger/OpenAPI.
 - טיפול אחיד בשגיאות.
 
@@ -233,16 +233,16 @@ GET /api/bank-balances/filters
 - `sortBy`
 - `sortDirection`
 
-## MediatR ו-CQRS
+## Application Services
 
-המערכת תשתמש ב-MediatR כדי להפריד בין שכבת ה-API לבין תרחישי השימוש:
+המערכת משתמשת ב-Application services כדי להפריד בין שכבת ה-API לבין תרחישי השימוש:
 
 - Controller או Minimal API יקבל request.
 - ה-request יתורגם ל-Query.
-- Handler בשכבת Application יבצע את הלוגיקה.
-- ה-Handler יחזיר DTO מוכן ל-API.
+- Service בשכבת Application יבצע ולידציה, סינון, מיון ו-pagination.
+- ה-Service יחזיר DTO מוכן ל-API.
 
-בשלב זה נדרש בעיקר Query side, מכיוון שאין פעולות כתיבה.
+MediatR ו-CQRS מלא הוסרו מהשלב הנוכחי מכיוון שהמערכת קטנה, read-only, וללא פעולות כתיבה. ההפרדה עדיין נשמרת דרך `IBankBalancesQueryService`, DTOs ו-abstractions. אם בעתיד יתווספו workflows רבים, commands, cross-cutting behaviors מורכבים או פעולות כתיבה, ניתן לשקול מחדש שימוש ב-MediatR או מנגנון pipeline אחר.
 
 ## Thread Safety
 
@@ -251,8 +251,10 @@ GET /api/bank-balances/filters
 - רשומות Domain ו-DTOs יוגדרו כ-immutable records כאשר מתאים.
 - repository שמחזיק cache בזיכרון ישתמש בטעינה חד-פעמית בטוחה, לדוגמה `Lazy<T>` או נעילה ממוקדת.
 - לא תתבצע מוטציה על collections משותפים לאחר הטעינה.
-- Handlers יהיו stateless ככל האפשר.
+- Application services יהיו stateless ככל האפשר.
 - שירותים עם lifetime של Singleton יכילו רק state immutable או thread-safe.
+- אין צורך בנעילות ידניות סביב הקריאה השוטפת כי הנתונים נטענים פעם אחת דרך `Lazy` ולאחר מכן הרשימה אינה משתנה.
+- אם בעתיד יתווסף state משתנה, רענון cache, או עדכון נתונים בזמן ריצה, יהיה צורך לבחון מנגנון locking, reader/writer lock, immutable snapshot replacement או distributed cache מתאים.
 
 ## מבנה תיקיות מוצע
 
@@ -303,16 +305,14 @@ README.md
 
 ```text
 features/dashboard/
-  dashboard-page.component.ts
-  dashboard-page.component.html
-  dashboard-page.component.scss
   components/
-    balance-summary-cards/
-    balance-filter-bar/
+    summary-cards/
+    filter-panel/
     balance-table/
   models/
     bank-balance.model.ts
     bank-balance-filter.model.ts
+    sort-option.model.ts
   services/
     bank-balances-api.service.ts
 ```
@@ -321,6 +321,7 @@ features/dashboard/
 
 - רכיבי UI קטנים וממוקדים.
 - Service אחד לתקשורת מול ה-API.
+- קומפוננטת root מחזיקה orchestration ו-state מקומי, אך תצוגת summary, filter panel וטבלה מפוצלות לקומפוננטות ייעודיות.
 - הפרדה בין models של Frontend לבין DTOs במקרה שיידרש mapping.
 - שמירה על נגישות בסיסית: labels, focus states, טקסטים ברורים.
 
@@ -454,10 +455,11 @@ docker compose up --build
 סעיף זה מרכז את השאלות המרכזיות שעלו במהלך האפיון והמימוש, ואת ההחלטות הנוכחיות:
 
 - כן משתמשים ב-DTOs כדי להפריד בין מודל Domain פנימי לבין חוזה API חיצוני.
-- כן משתמשים ב-MediatR כרגע עבור CQRS, decoupling, ו-pipeline אחיד ל-FluentValidation.
+- לא משתמשים כרגע ב-MediatR/CQRS; למערכת read-only קטנה Application service ישיר מספיק וברור יותר.
 - כן השרת נשאר stateless מבחינת HTTP/session, למרות שיש cache קריאה בזיכרון עבור נתוני ה-JSON.
 - כן קיימת ולידציה בצד שרת באמצעות FluentValidation עבור query parameters, ובנפרד קיימת ולידציית תקינות לנתוני JSON.
 - כן הסינון, המיון וה-pagination מתבצעים בצד שרת. בצד לקוח לא מבצעים סינון עסקי על כלל הנתונים.
+- כן קיים cache קצר בצד לקוח לקריאות API זהות, כדי שלחיצה חוזרת על "החלת סינון" בלי שינוי פרמטרים לא תשלח request נוסף במשך כמה דקות.
 - כן יש ניהול שגיאות אחיד: ProblemDetails בצד שרת ו-HTTP interceptor בצד Angular.
 - כן יש קובצי environment בצד Angular עבור `apiBaseUrl`.
 - כן Dockerfiles הם multi-stage.
@@ -543,7 +545,9 @@ private readonly Lazy<Task<IReadOnlyList<BankBalance>>> _balances;
 
 #### Cache בצד לקוח
 
-בצד לקוח לא נשמור את כלל dataset. כן אפשר לשמור:
+בצד לקוח לא נשמור את כלל dataset. כן נשמר cache קצר של response לפי URL ו-query params למשך 3 דקות, כדי למנוע קריאות כפולות כאשר המשתמש לוחץ שוב על "החלת סינון" בלי שינוי פרמטרים.
+
+בנוסף אפשר לשמור:
 
 - filter options כגון בנקים, מטבעות, סוגי יתרה וסטטוסים.
 - העמוד האחרון שנטען.
@@ -551,6 +555,19 @@ private readonly Lazy<Task<IReadOnlyList<BankBalance>>> _balances;
 - state ב-URL כדי לאפשר שיתוף וחזרה לאותו מצב.
 
 לא מומלץ לשמור בצד לקוח מיליוני רשומות או לבצע client-side filtering על כלל הנתונים.
+
+### TypeScript interfaces בצד לקוח
+
+מודלי ה-Frontend מוגדרים כ-`interface` משום שהם מייצגים contract של JSON שמגיע מה-API ואינם צריכים runtime behavior.
+
+יתרונות:
+
+- compile-time type safety.
+- אין יצירת class runtime מיותרת.
+- התאמה טבעית ל-DTOs שמגיעים מ-HTTP.
+- קל להרחיב ולבצע type checking ב-TypeScript.
+
+אם בעתיד יידרש behavior, validation runtime או methods על המודל, ניתן לעבור ל-class או להוסיף mapping layer.
 
 ### Factory
 
@@ -574,11 +591,12 @@ private readonly Lazy<Task<IReadOnlyList<BankBalance>>> _balances;
 
 ### ולידציות ושגיאות
 
-- ולידציית query parameters מתבצעת בשכבת Application באמצעות FluentValidation ו-MediatR pipeline behavior: טווח סכומים, `page`, `pageSize`, `sortBy`, `sortDirection`.
+- ולידציית query parameters מתבצעת בשכבת Application באמצעות FluentValidation: טווח סכומים, `page`, `pageSize`, `sortBy`, `sortDirection`.
 - ה-API Controller נשאר דק ומתרגם HTTP request ל-query בלבד.
 - ולידציית מבנה JSON מתבצעת ב-`JsonBankBalanceReadRepository`: שדות חובה, פורמט תאריך, id חיובי וזיהוי כפילויות id.
 - שגיאות שרת מוחזרות כ-ProblemDetails עם `traceId`.
 - בצד הלקוח קיים HTTP interceptor שמרכז טיפול בשגיאות API ומייצר הודעה ידידותית למשתמש.
+- אם קובץ ה-JSON פגום, חסרים בו שדות חובה, יש תאריך לא תקין או id כפול, השרת מחזיר ProblemDetails עם הכותרת `Demo data is invalid` והלקוח מציג הודעת שגיאה ידידותית.
 
 חלוקת אחריות:
 
@@ -601,17 +619,17 @@ private readonly Lazy<Task<IReadOnlyList<BankBalance>>> _balances;
 - versioning עתידי של API.
 - שמירה על גבולות Clean Architecture.
 
-### MediatR ו-AddMediatR
+### MediatR ו-CQRS
 
-`AddMediatR` אינו חובה טכנית בפרויקט קטן. ניתן היה לממש Controller שקורא ישירות ל-Application service. הבחירה ב-MediatR נעשתה כדי:
+MediatR אינו נדרש בשלב הנוכחי והוסר מהקוד. הסיבות:
 
-- להפריד Controller מ-use cases.
-- לממש CQRS בצורה עקבית.
-- לאפשר pipeline behaviors, כמו FluentValidation.
-- לאפשר הרחבות עתידיות כגון logging, metrics, authorization או caching behavior.
-- להשאיר Controllers דקים.
+- אין פעולות כתיבה.
+- יש use case מרכזי אחד של query.
+- FluentValidation ניתן להרצה ישירות מתוך Application service.
+- הסרה מצמצמת תלות חיצונית ורעש רישוי.
+- Controller עדיין נשאר דק כי הוא תלוי ב-`IBankBalancesQueryService`.
 
-הסתייגות: הגרסה העדכנית של MediatR מציגה אזהרת רישוי בסביבת dev/test. לפני production יש לקבל החלטה אם להשתמש ברישיון מתאים, לבחור חלופה, או להחליף ל-Application services פשוטים.
+אם בעתיד יתווספו commands, workflows רבים, pipeline behaviors מורכבים או צורך ב-dispatching אחיד בין use cases רבים, ניתן לשקול מחדש MediatR או חלופה דומה. בשלב הנוכחי הוא היה מיועד בעיקר להמשך ולכן הוסר.
 
 ### לוגים
 
@@ -673,11 +691,11 @@ Virtual Scroll אינו תחליף ל-server-side pagination/filtering/sorting. 
 ### ניהול תלויות
 
 - התלויות נוספו דרך package managers (`dotnet add package`, Angular CLI/npm) כדי לקבל גרסאות עדכניות.
-- MediatR בגרסה העדכנית שנוספה מציג אזהרת רישוי בסביבת dev/test. לפני production צריך לקבל החלטה מפורשת: שימוש עם רישיון מתאים, בחירה בגרסה/חלופה שמתאימה למדיניות הרישוי, או החלפה במימוש CQRS פנימי פשוט אם רוצים לצמצם תלות.
+- MediatR הוסר כדי לצמצם תלות ורישוי שאינם נדרשים בשלב read-only קטן.
 
 ספריות מרכזיות:
 
-- Backend: ASP.NET Core, MediatR, FluentValidation, Serilog.
+- Backend: ASP.NET Core, FluentValidation, Serilog.
 - Frontend: Angular, RxJS, TypeScript.
 
 יש להמשיך לבדוק עדכניות, רישוי ופגיעויות אבטחה לפני production.
@@ -732,7 +750,7 @@ Redis יהיה רלוונטי אם:
 
 - פירוק דרישות לאפיון טכני.
 - תכנון מבנה Clean Architecture.
-- בחירת תבניות מתאימות כגון CQRS ו-MediatR.
+- בחירת תבניות מתאימות כגון Application services, DTOs ו-FluentValidation.
 - ניסוח שיקולי thread-safety.
 - בהמשך: סיוע בכתיבת קוד, בדיקות, README והוראות הרצה.
 
@@ -740,7 +758,6 @@ Redis יהיה רלוונטי אם:
 
 - האם לעבור בעתיד ל-cursor/keyset pagination במקום page/pageSize.
 - האם להוסיף OpenTelemetry להפצת trace בין Frontend, Nginx ו-Backend.
-- החלטת רישוי/חלופה ל-MediatR לפני production.
 - האם להוסיף SignalStore כאשר state ה-Frontend יתרחב מעבר למסך יחיד.
 - האם להוסיף Redis לאחר מדידה של עומסי שאילתות או צורך ב-distributed cache.
 - האם להישאר עם JSON + indexes, לעבור ל-SQLite embedded, או לעבור ל-DB/search index כאשר הנתונים יגדלו למיליוני רשומות.
@@ -757,3 +774,4 @@ Redis יהיה רלוונטי אם:
 | 2026-05-28 | מעבר ל-FluentValidation עבור query validation | ריכוז חוקי ולידציה בשכבת Application ושמירה על Controller דק |
 | 2026-05-28 | ריכוז החלטות ארכיטקטורה מהשיחה | תיעוד MediatR, stateless/cache, Domain מול DTO, Lazy loading, Redis, SignalStore, Virtual Scroll, JSON במיליוני רשומות ו-Docker |
 | 2026-05-28 | שיפור חיפוש חופשי | תמיכה בחיפוש מרובה מילים על פני כמה שדות והוספת חיפוש אוטומטי עם debounce בצד הלקוח |
+| 2026-05-28 | פישוט ארכיטקטורה ופיצול Frontend | הסרת MediatR/CQRS שאינם נדרשים בשלב read-only, מעבר ל-Application service, פיצול קומפוננטות UI, הוספת cache קצר בצד לקוח ותיעוד JSON פגום |

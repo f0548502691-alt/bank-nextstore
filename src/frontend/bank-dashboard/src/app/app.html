@@ -13,214 +13,35 @@
     </button>
   </section>
 
-  <section class="summary-grid" aria-label="סיכום יתרות">
-    <article class="summary-card">
-      <span>רשומות בתוצאה</span>
-      <strong>{{ summary()?.totalCount ?? 0 | number }}</strong>
-    </article>
-    <article class="summary-card">
-      <span>בנקים ייחודיים</span>
-      <strong>{{ summary()?.bankCount ?? 0 | number }}</strong>
-    </article>
-    <article class="summary-card">
-      <span>תאריך עדכני ביותר</span>
-      <strong>{{ summary()?.latestDate ? (summary()?.latestDate | date: 'dd/MM/yyyy') : '-' }}</strong>
-    </article>
-    <article class="summary-card totals-card">
-      <span>סכום לפי מטבע</span>
-      @if (currencyTotals().length > 0) {
-        <div class="currency-list">
-          @for (total of currencyTotals(); track total[0]) {
-            <span>{{ total[0] }} {{ total[1] | number: '1.2-2' }}</span>
-          }
-        </div>
-      } @else {
-        <strong>-</strong>
-      }
-    </article>
-  </section>
+  <app-summary-cards [summary]="summary()" [currencyTotals]="currencyTotals()" />
 
-  <section class="panel">
-    <form class="filters" (ngSubmit)="applyFilters()">
-      <label>
-        חיפוש חופשי
-        <input
-          name="search"
-          type="search"
-          placeholder="בנק, חשבון, סוג יתרה, מטבע או סטטוס"
-          [ngModel]="filterModel.search"
-          (ngModelChange)="scheduleSearch($event)"
-        />
-        <small class="field-hint">
-          החיפוש מתבצע אוטומטית אחרי עצירה קצרה בהקלדה. ניתן לחפש כמה מילים, למשל:
-          לאומי אופציות.
-        </small>
-        @if (searchPending()) {
-          <small class="field-hint active">ממתין לסיום ההקלדה...</small>
-        }
-      </label>
-
-      <label>
-        בנק
-        <select name="bankName" [(ngModel)]="filterModel.bankName">
-          <option value="">כל הבנקים</option>
-          @for (bank of filterOptions().banks; track bank) {
-            <option [value]="bank">{{ bank }}</option>
-          }
-        </select>
-      </label>
-
-      <label>
-        מטבע
-        <select name="currency" [(ngModel)]="filterModel.currency">
-          <option value="">כל המטבעות</option>
-          @for (currency of filterOptions().currencies; track currency) {
-            <option [value]="currency">{{ currency }}</option>
-          }
-        </select>
-      </label>
-
-      <label>
-        סוג יתרה
-        <select name="balanceType" [(ngModel)]="filterModel.balanceType">
-          <option value="">כל הסוגים</option>
-          @for (balanceType of filterOptions().balanceTypes; track balanceType) {
-            <option [value]="balanceType">{{ balanceType }}</option>
-          }
-        </select>
-      </label>
-
-      <label>
-        סטטוס
-        <select name="status" [(ngModel)]="filterModel.status">
-          <option value="">כל הסטטוסים</option>
-          @for (status of filterOptions().statuses; track status) {
-            <option [value]="status">{{ status }}</option>
-          }
-        </select>
-      </label>
-
-      <label>
-        סכום מינימלי
-        <input name="minAmount" type="number" min="0" [(ngModel)]="filterModel.minAmount" />
-      </label>
-
-      <label>
-        סכום מקסימלי
-        <input name="maxAmount" type="number" min="0" [(ngModel)]="filterModel.maxAmount" />
-      </label>
-
-      <label>
-        מיון לפי
-        <select name="sortBy" [(ngModel)]="filterModel.sortBy">
-          @for (sortOption of sortOptions; track sortOption.value) {
-            <option [value]="sortOption.value">{{ sortOption.label }}</option>
-          }
-        </select>
-      </label>
-
-      <label>
-        כיוון מיון
-        <select name="sortDirection" [(ngModel)]="filterModel.sortDirection">
-          <option value="desc">יורד</option>
-          <option value="asc">עולה</option>
-        </select>
-      </label>
-
-      <div class="filter-actions">
-        <button type="submit" [disabled]="loading()">החלת סינון</button>
-        <button type="button" class="secondary-button" (click)="clearFilters()" [disabled]="loading()">
-          ניקוי
-        </button>
-      </div>
-    </form>
-  </section>
+  <app-filter-panel
+    [filterModel]="filterModel"
+    [filterOptions]="filterOptions()"
+    [sortOptions]="sortOptions"
+    [loading]="loading()"
+    [searchPending]="searchPending()"
+    (applyFilters)="applyFilters()"
+    (clearFilters)="clearFilters()"
+    (searchChange)="scheduleSearch($event)"
+  />
 
   @if (error()) {
     <section class="message error" role="alert">{{ error() }}</section>
   }
 
-  <section class="panel table-panel">
-    <div class="table-header">
-      <h2>תנועות יתרה</h2>
-      <span>
-        מציג {{ balances().length | number }} מתוך {{ totalCount() | number }} תוצאות
-      </span>
-    </div>
-
-    @if (loading()) {
-      <div class="message">טוען נתונים...</div>
-    } @else if (balances().length === 0) {
-      <div class="message">לא נמצאו תוצאות עבור הסינון הנוכחי.</div>
-    } @else {
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>תאריך</th>
-              <th>בנק</th>
-              <th>מספר חשבון</th>
-              <th>סוג יתרה</th>
-              <th>מטבע</th>
-              <th>סכום</th>
-              <th>סטטוס</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (balance of balances(); track balance.id) {
-              <tr>
-                <td>{{ balance.date | date: 'dd/MM/yyyy' }}</td>
-                <td>{{ balance.bankName }}</td>
-                <td>{{ balance.accountNumber }}</td>
-                <td>{{ balance.balanceType }}</td>
-                <td>{{ balance.currency }}</td>
-                <td class="amount">{{ balance.amount | number: '1.2-2' }}</td>
-                <td>
-                  <span class="status-pill">{{ balance.status }}</span>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-
-      <div class="pagination-bar" aria-label="ניווט בין עמודים">
-        <div class="page-size-control">
-          <label>
-            גודל עמוד
-            <select
-              name="pageSize"
-              [ngModel]="pageSize()"
-              (ngModelChange)="changePageSize($event)"
-              [disabled]="loading()"
-            >
-              @for (option of pageSizeOptions; track option) {
-                <option [ngValue]="option">{{ option }}</option>
-              }
-            </select>
-          </label>
-        </div>
-
-        <div class="pagination-actions">
-          <button
-            type="button"
-            class="secondary-button"
-            (click)="goToPreviousPage()"
-            [disabled]="loading() || !hasPreviousPage()"
-          >
-            הקודם
-          </button>
-          <span>עמוד {{ page() | number }} מתוך {{ totalPages() | number }}</span>
-          <button
-            type="button"
-            class="secondary-button"
-            (click)="goToNextPage()"
-            [disabled]="loading() || !hasNextPage()"
-          >
-            הבא
-          </button>
-        </div>
-      </div>
-    }
-  </section>
+  <app-balance-table
+    [balances]="balances()"
+    [loading]="loading()"
+    [totalCount]="totalCount()"
+    [page]="page()"
+    [totalPages]="totalPages()"
+    [pageSize]="pageSize()"
+    [pageSizeOptions]="pageSizeOptions"
+    [hasPreviousPage]="hasPreviousPage()"
+    [hasNextPage]="hasNextPage()"
+    (previousPage)="goToPreviousPage()"
+    (nextPage)="goToNextPage()"
+    (pageSizeChange)="changePageSize($event)"
+  />
 </main>

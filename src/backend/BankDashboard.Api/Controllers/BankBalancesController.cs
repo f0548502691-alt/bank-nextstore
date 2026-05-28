@@ -1,13 +1,13 @@
 using BankDashboard.Application.BankBalances.Dtos;
 using BankDashboard.Application.BankBalances.Queries;
-using MediatR;
+using BankDashboard.Application.BankBalances.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BankDashboard.Api.Controllers;
 
 [ApiController]
 [Route("api/bank-balances")]
-public sealed class BankBalancesController(ISender sender) : ControllerBase
+public sealed class BankBalancesController(IBankBalancesQueryService queryService) : ControllerBase
 {
     private const int DefaultPage = 1;
     private const int DefaultPageSize = 50;
@@ -29,7 +29,7 @@ public sealed class BankBalancesController(ISender sender) : ControllerBase
         [FromQuery] string? sortBy = "date",
         [FromQuery] string? sortDirection = "desc")
     {
-        var response = await sender.Send(
+        var response = await queryService.GetBankBalancesAsync(
             new GetBankBalancesQuery(
                 search,
                 bankName,
@@ -51,7 +51,7 @@ public sealed class BankBalancesController(ISender sender) : ControllerBase
     [ProducesResponseType<BankBalanceFilterOptionsDto>(StatusCodes.Status200OK)]
     public async Task<ActionResult<BankBalanceFilterOptionsDto>> GetFilterOptions(CancellationToken cancellationToken)
     {
-        var response = await sender.Send(new GetBankBalanceFilterOptionsQuery(), cancellationToken);
+        var response = await queryService.GetFilterOptionsAsync(cancellationToken);
         return Ok(response);
     }
 }
