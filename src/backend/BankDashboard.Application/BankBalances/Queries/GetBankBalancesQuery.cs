@@ -1,6 +1,3 @@
-using BankDashboard.Application.BankBalances.Dtos;
-using MediatR;
-
 namespace BankDashboard.Application.BankBalances.Queries;
 
 public sealed record GetBankBalancesQuery(
@@ -10,4 +7,8 @@ public sealed record GetBankBalancesQuery(
     string? BalanceType,
     string? Status,
     decimal? MinAmount,
-    decimal? MaxAmount) : IRequest<BankBalanceListResponse>;
+    decimal? MaxAmount,
+    int Page,
+    int PageSize,
+    string? SortBy,
+    string? SortDirection);

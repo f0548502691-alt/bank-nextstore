@@ -1,56 +1,20 @@
-# אפיון פתרון - Bank Balances Dashboard
-
-## מטרת המסמך
-
-מסמך זה מרכז את אפיון הפתרון למסך Dashboard להצגת יתרות בנק, כולל חיפוש, סינון והצגת נתונים בטבלה.  
-המסמך ישמש כמקור ידע מתעדכן: בכל שינוי משמעותי בקוד, במבנה, בהתנהגות או בהחלטות הטכניות - יש לעדכן גם את סעיף "יומן שינויים".
+# אפיון תמציתי - Bank Balances Dashboard
 
 ## מטרת המערכת
 
-בניית אפליקציית Web קטנה המדגימה:
+Dashboard להצגת יתרות בנק מתוך קובץ JSON דמו, עם:
 
-- טעינת נתוני דמו מקובץ JSON.
-- הצגת יתרות בנק בטבלת Dashboard נוחה לקריאה.
-- חיפוש חופשי לפי שדות מרכזיים.
-- סינון לפי מאפיינים עסקיים כגון בנק, מטבע, סוג יתרה, סטטוס וטווח סכומים.
-- הפרדה ברורה בין Backend, Frontend ושכבות פנימיות.
-- שימוש ב-Clean Architecture ובתבניות נפוצות כגון CQRS ו-MediatR.
-- מחשבה על איכות קוד, חוויית משתמש וחוויית פיתוח.
+- טעינת נתונים מ-`bank_balances_demo_5000.json`.
+- חיפוש חופשי.
+- סינון לפי בנק, מטבע, סוג יתרה, סטטוס וטווח סכומים.
+- מיון בצד שרת.
+- pagination בצד שרת.
+- הצגת סיכום וטבלה ב-Frontend.
+- תמיכה בהרצה עם Docker Compose.
 
-## טכנולוגיות יעד
+## מקור הנתונים
 
-### Backend
-
-- .NET 10
-- ASP.NET Core Web API
-- Clean Architecture
-- MediatR עבור CQRS ו-decoupling בין API ל-Application layer
-- Dependency Injection מובנה של ASP.NET Core
-- טעינת Demo Data מקובץ JSON מקומי
-
-### Frontend
-
-- Angular 20
-- TypeScript
-- Standalone Components
-- Signals / RxJS בהתאם לצורך המקומי
-- CSS מודולרי או SCSS פשוט
-
-## גבולות המימוש
-
-אין ציפייה למערכת Production מלאה. המימוש יתמקד בפתרון נקי, קריא ומדגים יכולות:
-
-- ללא הזדהות והרשאות.
-- ללא בסיס נתונים אמיתי בשלב הראשון.
-- ללא persistence של שינויים מצד המשתמש.
-- ללא pagination בצד שרת אם כמות הנתונים קטנה, אך התכנון יאפשר הרחבה.
-- ולידציה בסיסית לקלטי סינון וחיפוש.
-
-## נתוני דמו
-
-מקור הנתונים יהיה קובץ JSON שיצורף לפרויקט. אם מבנה הקובץ בפועל שונה, האפיון יעודכן בהתאם.
-
-מבנה רשומת יתרת בנק בקובץ `bank_balances_demo_5000.json`:
+מבנה רשומה בקובץ JSON:
 
 ```json
 {
@@ -59,146 +23,108 @@
   "bankName": "דיסקונט",
   "accountNumber": "237167",
   "balanceType": "יתרת עו\"ש",
-  "currency": "ILS",
+  "currency": "USD",
   "amount": 245571.18,
   "status": "פעיל"
 }
 ```
 
-שדות להצגה בטבלה:
+הקובץ נטען פעם אחת לכל instance של השרת ונשמר בזיכרון כנתוני demo. אם הקובץ פגום, חסרים שדות חובה, יש תאריך לא תקין או id כפול, השרת מחזיר `ProblemDetails` וה-Frontend מציג הודעת שגיאה ידידותית.
 
-- תאריך
-- שם בנק
-- מספר חשבון
-- סוג יתרה
-- מטבע
-- סכום
-- סטטוס
-
-## יכולות משתמש
-
-### Dashboard
-
-המסך הראשי יציג:
-
-- כותרת ותיאור קצר.
-- כרטיסי Summary:
-  - מספר חשבונות.
-  - סכום יתרות לפי מטבע.
-  - מספר בנקים ייחודיים.
-  - תאריך עדכון אחרון במערכת.
-- אזור חיפוש וסינון.
-- טבלת יתרות.
-- מצב ריק כאשר אין תוצאות.
-- הודעת שגיאה ידידותית במקרה של כשל בטעינת נתונים.
-
-### חיפוש
-
-חיפוש חופשי יתבצע מול:
-
-- שם בנק
-- מספר חשבון
-- סוג יתרה
-- מטבע
-- סטטוס
-
-החיפוש יהיה case-insensitive בצד השרת כדי לשמור על מקור אמת יחיד להתנהגות.
-
-### סינון
-
-סינונים מתוכננים:
-
-- בנק
-- מטבע
-- סוג יתרה
-- סטטוס
-- סכום מינימלי
-- סכום מקסימלי
-
-### מיון
-
-בשלב ראשון:
-
-- מיון ברירת מחדל לפי `date` בסדר יורד ולאחר מכן `id` בסדר יורד.
-
-הרחבה אפשרית:
-
-- מיון לפי כל עמודה מרכזית באמצעות פרמטרים ב-API.
-
-## ארכיטקטורת Backend
-
-ה-Backend יבנה לפי Clean Architecture, עם תלות פנימה בלבד:
+## מבנה הפרויקט
 
 ```text
-BankDashboard.Api
-  -> BankDashboard.Application
-      -> BankDashboard.Domain
-  -> BankDashboard.Infrastructure
-      -> BankDashboard.Application
-      -> BankDashboard.Domain
+src/
+  backend/
+    BankDashboard.Api/
+    BankDashboard.Application/
+    BankDashboard.Domain/
+    BankDashboard.Infrastructure/
+    BankDashboard.Application.Tests/
+  frontend/
+    bank-dashboard/
+      src/app/
+        core/
+        features/dashboard/
+          components/
+          models/
+          services/
+README.md
+SPECIFICATION.md
+docker-compose.yml
+bank_balances_demo_5000.json
 ```
 
-### Domain Layer
+## Backend
 
-אחריות:
+### שכבות
 
-- מודלים עסקיים נקיים.
-- Value Objects אם יהיה צורך.
-- כללי Domain בסיסיים שאינם תלויים בתשתית.
+- `Domain` - מודל עסקי נקי (`BankBalance`).
+- `Application` - DTOs, query objects, Application services, FluentValidation.
+- `Infrastructure` - קריאת JSON וטעינת נתוני demo.
+- `Api` - Controllers, DI, CORS, ProblemDetails, logging.
 
-דוגמאות:
+### החלטות מרכזיות
 
-- `BankAccountBalance`
-- `CurrencyCode`
-- `Money`
+- הוסרה תלות ב-MediatR/CQRS כי המערכת קטנה ו-read-only בשלב הנוכחי.
+- ה-Controller נשאר דק ותלוי ב-`IBankBalancesQueryService`.
+- DTOs נפרדים מ-Domain כדי לשמור contract יציב מול Frontend.
+- `DemoDataOptions` מרכז את נתיב קובץ ה-JSON דרך configuration.
+- `Lazy<Task<IReadOnlyList<BankBalance>>>` משמש לטעינה חד-פעמית, async ו-thread-safe של הנתונים.
+- אין צורך בנעילות ידניות כרגע כי הנתונים נטענים פעם אחת ואינם משתנים.
+- `CancellationToken` מועבר לאורך הקריאות כדי לאפשר ביטול request ו-I/O אם הלקוח התנתק.
 
-### Application Layer
+### ולידציה ושגיאות
 
-אחריות:
+- FluentValidation בודק:
+  - `page >= 1`
+  - `pageSize` בין 1 ל-500
+  - `sortBy` מתוך whitelist
+  - `sortDirection` הוא `asc` או `desc`
+  - `minAmount <= maxAmount`
+- JSON validation בודק שדות חובה, תאריך, id חיובי וכפילויות.
+- שגיאות מוחזרות כ-`ProblemDetails` עם `traceId`.
+- Serilog משמש ל-structured request logging.
 
-- Use cases של המערכת.
-- CQRS queries.
-- DTOs.
-- Interfaces לשירותי תשתית.
-- לוגיקת סינון, חיפוש ומיון.
+## Frontend
 
-דוגמאות:
+### טכנולוגיות
 
-- `GetBankBalancesQuery`
-- `GetBankBalancesQueryHandler`
-- `BankBalanceDto`
-- `IBankBalanceReadRepository`
+- Angular 20
+- Standalone Components
+- Signals
+- RxJS לפי צורך
+- TypeScript interfaces עבור חוזי API
 
-### Infrastructure Layer
+### מבנה UI
 
-אחריות:
+המסך מפוצל לרכיבים:
 
-- קריאת קובץ JSON.
-- מימוש repository עבור נתוני הדמו.
-- caching בזיכרון אם ידרש.
+- `summary-cards`
+- `filter-panel`
+- `balance-table`
 
-דוגמאות:
+קומפוננטת `App` מחזיקה orchestration ו-state מקומי בלבד.
 
-- `JsonBankBalanceReadRepository`
-- `DemoDataOptions`
+### חיפוש וסינון
 
-### API Layer
+- חיפוש חופשי מתבצע בצד שרת.
+- החיפוש מפצל מילים ומחייב שכל מילה תופיע באחד משדות החיפוש.
+- דוגמה: `לאומי אופציות` יתאים כאשר `לאומי` נמצא בשם הבנק ו-`אופציות` בסוג היתרה.
+- ב-Frontend החיפוש נשלח אוטומטית אחרי debounce קצר; אין צורך ללחוץ "החלת סינון".
+- סינון עסקי אינו מתבצע על כלל הנתונים בצד לקוח.
 
-אחריות:
+### Cache בצד לקוח
 
-- הגדרת endpoints.
-- תרגום HTTP requests ל-MediatR requests.
-- Swagger/OpenAPI.
-- טיפול אחיד בשגיאות.
+קיים cache קצר לפי URL ו-query params למשך 3 דקות, כדי למנוע קריאות זהות כאשר המשתמש לוחץ שוב על "החלת סינון" בלי שינוי פרמטרים.
 
-דוגמאות endpoints:
+לא נשמרים מיליוני רשומות בצד לקוח.
 
-```http
-GET /api/bank-balances
-GET /api/bank-balances/filters
-```
+## API
 
-פרמטרים ל-`GET /api/bank-balances`:
+### `GET /api/bank-balances`
+
+פרמטרים:
 
 - `search`
 - `bankName`
@@ -207,272 +133,119 @@ GET /api/bank-balances/filters
 - `status`
 - `minAmount`
 - `maxAmount`
+- `page`
+- `pageSize`
+- `sortBy`
+- `sortDirection`
 
-## MediatR ו-CQRS
+התגובה כוללת:
 
-המערכת תשתמש ב-MediatR כדי להפריד בין שכבת ה-API לבין תרחישי השימוש:
+- `items`
+- `totalCount`
+- `page`
+- `pageSize`
+- `totalPages`
+- `hasPreviousPage`
+- `hasNextPage`
+- `summary`
 
-- Controller או Minimal API יקבל request.
-- ה-request יתורגם ל-Query.
-- Handler בשכבת Application יבצע את הלוגיקה.
-- ה-Handler יחזיר DTO מוכן ל-API.
+### `GET /api/bank-balances/filters`
 
-בשלב זה נדרש בעיקר Query side, מכיוון שאין פעולות כתיבה.
+מחזיר ערכי סינון ייחודיים:
 
-## Thread Safety
+- `banks`
+- `currencies`
+- `balanceTypes`
+- `statuses`
 
-המערכת קוראת נתוני דמו, ולכן אין state משתנה עסקי משמעותי. עדיין נשמור על עקרונות thread-safe:
+## Thread safety ו-concurrency
 
-- רשומות Domain ו-DTOs יוגדרו כ-immutable records כאשר מתאים.
-- repository שמחזיק cache בזיכרון ישתמש בטעינה חד-פעמית בטוחה, לדוגמה `Lazy<T>` או נעילה ממוקדת.
-- לא תתבצע מוטציה על collections משותפים לאחר הטעינה.
-- Handlers יהיו stateless ככל האפשר.
-- שירותים עם lifetime של Singleton יכילו רק state immutable או thread-safe.
+- השרת stateless מבחינת HTTP/session.
+- יש cache פנימי בזיכרון עבור נתוני demo בלבד.
+- אם כמה requests מגיעים יחד לפני סיום הטעינה הראשונה, כולם ממתינים לאותה טעינת `Lazy<Task<...>>`.
+- לאחר הטעינה, הנתונים נקראים כרשימה שאינה משתנה.
+- בהרבה קריאות, צוואר הבקבוק יהיה CPU בגלל filtering/sorting בזיכרון, לא קריאה חוזרת מהדיסק.
 
-## מבנה תיקיות מוצע
+## Docker
 
-```text
-src/
-  backend/
-    BankDashboard.sln
-    BankDashboard.Api/
-      Controllers/
-      Extensions/
-      Program.cs
-      appsettings.json
-    BankDashboard.Application/
-      BankBalances/
-        Queries/
-        Dtos/
-      Abstractions/
-      DependencyInjection.cs
-    BankDashboard.Domain/
-      BankBalances/
-      Common/
-    BankDashboard.Infrastructure/
-      Data/
-      Repositories/
-      Options/
-      DependencyInjection.cs
-  frontend/
-    bank-dashboard/
-      src/
-        app/
-          core/
-          features/
-            dashboard/
-              components/
-              models/
-              services/
-          shared/
-        styles/
-data/
-  bank-balances.demo.json
-docs/
-  screenshots/
-SPECIFICATION.md
-README.md
-```
+קיימים Dockerfiles multi-stage:
 
-## מבנה Frontend מוצע
+- Backend: build עם .NET SDK ואז runtime עם ASP.NET image.
+- Frontend: build עם Node ואז runtime עם Nginx.
 
-```text
-features/dashboard/
-  dashboard-page.component.ts
-  dashboard-page.component.html
-  dashboard-page.component.scss
-  components/
-    balance-summary-cards/
-    balance-filter-bar/
-    balance-table/
-  models/
-    bank-balance.model.ts
-    bank-balance-filter.model.ts
-  services/
-    bank-balances-api.service.ts
-```
+`docker-compose.yml` מריץ:
 
-עקרונות:
-
-- רכיבי UI קטנים וממוקדים.
-- Service אחד לתקשורת מול ה-API.
-- הפרדה בין models של Frontend לבין DTOs במקרה שיידרש mapping.
-- שמירה על נגישות בסיסית: labels, focus states, טקסטים ברורים.
-
-## חוויית משתמש
-
-דגשים:
-
-- Dashboard נקי עם מידע מרכזי מעל הטבלה.
-- סינונים גלויים וקלים לשימוש.
-- כפתור ניקוי סינונים.
-- הצגת מספר תוצאות.
-- עיצוב responsive בסיסי.
-- תמיכה טובה בקריאת מספרים וכספים:
-  - הפרדת אלפים.
-  - סימון מטבע.
-  - צבע עדין ליתרות שליליות אם קיימות.
-
-## API Contract ראשוני
-
-### Get balances
-
-```http
-GET /api/bank-balances?search=דיסקונט&currency=ILS&minAmount=0
-```
-
-Response:
-
-```json
-{
-  "items": [
-    {
-      "id": 1,
-      "date": "2025-01-08",
-      "bankName": "דיסקונט",
-      "accountNumber": "237167",
-      "balanceType": "יתרת עו\"ש",
-      "currency": "ILS",
-      "amount": 245571.18,
-      "status": "פעיל"
-    }
-  ],
-  "totalCount": 1,
-  "summary": {
-    "totalCount": 1,
-    "bankCount": 1,
-    "latestDate": "2025-01-08",
-    "totalAmountByCurrency": {
-      "ILS": 245571.18
-    }
-  }
-}
-```
-
-### Get filter values
-
-```http
-GET /api/bank-balances/filters
-```
-
-Response:
-
-```json
-{
-  "banks": ["דיסקונט", "פועלים"],
-  "currencies": ["ILS", "USD", "EUR"],
-  "balanceTypes": ["יתרת עו\"ש", "מניות"],
-  "statuses": ["פעיל", "לא פעיל", "חסום"]
-}
-```
+- `backend` על פורט `5000`.
+- `frontend` על פורט `4200`, עם proxy של `/api` ל-backend.
 
 ## בדיקות
 
-בדיקות מומלצות:
+בדיקות קיימות:
 
-- Unit tests ל-Application query handler:
+- Application service:
   - חיפוש.
-  - סינון לפי מטבע.
-  - סינון לפי סטטוס וטווח סכומים.
-  - שילוב כמה סינונים.
-- Unit tests לטעינת JSON תקין.
-- בדיקות ידניות ל-Frontend:
-  - טעינה ראשונית.
-  - מצב ללא תוצאות.
-  - שגיאת API.
-  - responsive layout בסיסי.
+  - חיפוש מרובה מילים.
+  - סינון.
+  - מיון.
+  - pagination.
+- FluentValidation.
+- טעינת JSON תקין.
+- דחיית JSON עם id כפול.
+- Angular component tests.
 
-## הוראות הרצה
-
-### Backend
+פקודות:
 
 ```bash
 cd src/backend
-dotnet restore
-dotnet run --project BankDashboard.Api --urls http://localhost:5000
+dotnet test
+
+cd ../frontend/bank-dashboard
+npm test -- --watch=false
 ```
 
-### Frontend
+## המלצות להמשך
 
-```bash
-cd src/frontend/bank-dashboard
-npm install
-npm start
-```
+### נתוני עתק
 
-### כתובות צפויות
+ה-contract הנוכחי כבר מתאים לנתונים גדולים: server-side filtering, sorting ו-pagination. עם זאת, אם הנתונים יגדלו למאות אלפים או מיליוני רשומות, JSON בזיכרון כבר לא יהיה אידיאלי.
 
-- API: `https://localhost:7001` או `http://localhost:5000`
-- Frontend: `http://localhost:4200`
-- OpenAPI: `/swagger` או endpoint OpenAPI מקביל בהתאם להגדרת .NET 10
+אפשרויות:
 
-### Docker Compose
+1. להישאר עם JSON בזיכרון - מתאים לנתונים קטנים/בינוניים.
+2. JSON + indexes בזיכרון - מתאים לנתונים read-only עם שדות חיפוש מוגדרים.
+3. JSON Lines + streaming + cursor pagination - מתאים לקריאה קדימה, פחות למיון דינמי.
+4. SQLite embedded - פתרון file-based עם indexes ו-SQL.
+5. DB או search index - מומלץ לנתוני עתק והרבה משתמשים.
 
-```bash
-docker compose up --build
-```
+### חוויית משתמש
 
-- Frontend: `http://localhost:4200`
-- Backend API: `http://localhost:5000/api/bank-balances`
+- לשקול URL state עבור פילטרים, מיון ועמוד.
+- לשקול loading skeleton.
+- לשקול Virtual Scroll רק אם רוצים גלילה רציפה; הוא אינו מחליף server-side pagination.
+- להוסיף ביטול requests קודמים בזמן הקלדה אם החיפוש יהפוך כבד יותר.
 
-ה-Frontend נבנה כקבצים סטטיים ומוגש על ידי Nginx. קריאות `/api` עוברות מ-Nginx לשירות ה-backend בתוך רשת ה-Compose.
+### ביצועים ותפעול
 
-## החלטות מימוש ויכולת הרחבה
+- להוסיף OpenTelemetry ו-correlation id.
+- למדוד latency, error rate ו-slow queries.
+- לשקול Redis רק אם יש צורך מוכח ב-distributed cache או caching של שאילתות יקרות.
+- לשקול rate limiting אם יהיו הרבה משתמשים.
+- לשקול precomputed summaries אם חישובי summary יהיו יקרים.
 
-### ריבוי קריאות במקביל
+### ארכיטקטורה
 
-- ה-API stateless ברמת request.
-- `JsonBankBalanceReadRepository` רשום כ-Singleton וטוען את קובץ ה-JSON דרך `Lazy<Task<IReadOnlyList<BankBalance>>>`.
-- אם כמה קריאות מגיעות יחד לפני סיום הטעינה הראשונה, כולן ממתינות לאותה משימת טעינה במקום לבצע קריאות דיסק כפולות.
-- לאחר הטעינה, הקריאות עובדות מול רשימה immutable בפועל, והסינון מתבצע בזיכרון לכל request.
-
-### ביצועי קריאת הקובץ
-
-קובץ של 5,000 רשומות הוא קטן יחסית. הקריאה האיטית ביותר היא הטעינה הראשונה מהדיסק וה-deserialization, ולאחר מכן אין קריאה חוזרת לקובץ. אם כמות הנתונים תגדל משמעותית, נקודות ההרחבה הטבעיות הן pagination, מעבר ל-DB, cache מנוהל או טעינה ברקע.
-
-### Factory
-
-בשלב הנוכחי אין צורך ב-Factory: קיימת תשתית אחת ברורה לקריאת נתונים, וה-DI מחבר abstraction ל-implementation. Factory יהיה מוצדק אם יתווספו כמה מקורות נתונים, בחירה דינמית לפי tenant, קבצים שונים לפי סביבה, או אסטרטגיות parsing שונות.
-
-### שימוש בפיצ'רים חדשים
-
-- Angular: standalone component, `inject`, Signals, `computed`, control flow חדש עם `@if` / `@for`, ו-`provideHttpClient`.
-- .NET: target ל-`.NET 10`, minimal hosting model, records immutable, primary constructors, `DateOnly`, async APIs ו-DI מובנה.
-
-### הפרדה בין שכבות וצימוד
-
-- `Domain` מכיל מודל עסקי נקי ללא תלות בתשתיות.
-- `Application` מכיל DTOs, queries, handlers ו-abstractions.
-- `Infrastructure` מממש את הקריאה מה-JSON דרך abstraction של Application.
-- `Api` מכיר את Application ו-Infrastructure לצורך composition root בלבד.
-- Frontend מבודד את חוזה ה-API ב-service וב-models.
-
-הצימוד המרכזי שנותר הוא חוזה ה-DTO בין API ל-Frontend ושמות שדות ה-JSON בתוך ה-repository. זה צימוד סביר לשלב הדמו, וניתן להרחבה באמצעות mapping/versioning אם החוזה יהפוך ציבורי או יציב לאורך זמן.
-
-## שימוש ב-AI במהלך הפיתוח
-
-כלי AI בשימוש:
-
-- GPT-5.5 בתוך Cursor Cloud.
-
-אופן השימוש:
-
-- פירוק דרישות לאפיון טכני.
-- תכנון מבנה Clean Architecture.
-- בחירת תבניות מתאימות כגון CQRS ו-MediatR.
-- ניסוח שיקולי thread-safety.
-- בהמשך: סיוע בכתיבת קוד, בדיקות, README והוראות הרצה.
-
-## החלטות פתוחות
-
-- האם להוסיף pagination בצד שרת כאשר כמות הנתונים תגדל.
-- האם להוסיף sorting דינמי לפי עמודות.
-- האם להעביר את כתובת ה-API ב-Frontend לקובץ environment/config במקום proxy יחסי.
+- אם יתווספו פעולות כתיבה, workflows רבים או cross-cutting behaviors מורכבים, אפשר לשקול מחדש CQRS/MediatR או מנגנון pipeline אחר.
+- אם state ה-Frontend יגדל או ישותף בין מסכים, אפשר לשקול SignalStore.
+- אם מקור הנתונים יהפוך דינמי או רב-מקורי, אפשר לשקול Factory או Strategy לבחירת repository.
 
 ## יומן שינויים
 
-| תאריך | שינוי | סיבה |
-| --- | --- | --- |
-| 2026-05-28 | יצירת אפיון ראשוני | תכנון Dashboard ליתרות בנק לפי דרישות המטלה, כולל Clean Architecture, MediatR, Angular 20 ו-.NET 10 |
-| 2026-05-28 | תחילת מימוש Backend ו-Frontend לפי קובץ JSON בפועל | התאמת האפיון לשדות `date`, `balanceType`, `amount`, `status`; הוספת API, repository, queries, בדיקות יחידה ראשוניות ומסך Dashboard |
-| 2026-05-28 | הוספת Docker ותיעוד החלטות הרחבה | תמיכה בהרצה מלאה עם Docker Compose והבהרת concurrency, factory, שימוש בפיצ'רים חדשים והפרדה בין שכבות |
+| תאריך | שינוי |
+| --- | --- |
+| 2026-05-28 | יצירת אפיון ראשוני |
+| 2026-05-28 | מימוש Backend/Frontend לפי JSON |
+| 2026-05-28 | הוספת Docker Compose |
+| 2026-05-28 | הוספת pagination, sorting, validation ו-error handling |
+| 2026-05-28 | שיפור חיפוש חופשי עם debounce |
+| 2026-05-28 | הסרת MediatR ופיצול קומפוננטות Frontend |
+| 2026-05-28 | קיצור האפיון וריכוז המלצות להמשך |

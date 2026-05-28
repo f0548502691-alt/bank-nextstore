@@ -1,0 +1,83 @@
+<section class="panel table-panel">
+  <div class="table-header">
+    <h2>תנועות יתרה</h2>
+    <span>
+      מציג {{ balances().length | number }} מתוך {{ totalCount() | number }} תוצאות
+    </span>
+  </div>
+
+  @if (loading()) {
+    <div class="message">טוען נתונים...</div>
+  } @else if (balances().length === 0) {
+    <div class="message">לא נמצאו תוצאות עבור הסינון הנוכחי.</div>
+  } @else {
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>תאריך</th>
+            <th>בנק</th>
+            <th>מספר חשבון</th>
+            <th>סוג יתרה</th>
+            <th>מטבע</th>
+            <th>סכום</th>
+            <th>סטטוס</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (balance of balances(); track balance.id) {
+            <tr>
+              <td>{{ balance.date | date: 'dd/MM/yyyy' }}</td>
+              <td>{{ balance.bankName }}</td>
+              <td>{{ balance.accountNumber }}</td>
+              <td>{{ balance.balanceType }}</td>
+              <td>{{ balance.currency }}</td>
+              <td class="amount">{{ balance.amount | number: '1.2-2' }}</td>
+              <td>
+                <span class="status-pill">{{ balance.status }}</span>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pagination-bar" aria-label="ניווט בין עמודים">
+      <div class="page-size-control">
+        <label>
+          גודל עמוד
+          <select
+            name="pageSize"
+            [ngModel]="pageSize()"
+            (ngModelChange)="pageSizeChange.emit($event)"
+            [disabled]="loading()"
+          >
+            @for (option of pageSizeOptions(); track option) {
+              <option [ngValue]="option">{{ option }}</option>
+            }
+          </select>
+        </label>
+      </div>
+
+      <div class="pagination-actions">
+        <button
+          type="button"
+          class="secondary-button"
+          (click)="previousPage.emit()"
+          [disabled]="loading() || !hasPreviousPage()"
+        >
+          הקודם
+        </button>
+        <span>עמוד {{ page() | number }} מתוך {{ totalPages() | number }}</span>
+        <button
+          type="button"
+          class="secondary-button"
+          (click)="nextPage.emit()"
+          [disabled]="loading() || !hasNextPage()"
+        >
+          הבא
+        </button>
+      </div>
+    </div>
+  }
+</section>

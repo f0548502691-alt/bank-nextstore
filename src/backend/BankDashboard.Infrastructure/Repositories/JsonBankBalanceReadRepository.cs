@@ -48,7 +48,12 @@ public sealed class JsonBankBalanceReadRepository : IBankBalanceReadRepository
             return [];
         }
 
-        return records.Select(ToDomain).ToArray();
+        var balances = records.Select(ToDomain).ToArray();
+        ValidateBalances(balances);
+
+        _logger.LogInformation("Loaded {Count} bank balance records from demo data", balances.Length);
+
+        return balances;
     }
 
     private static string ResolveFilePath(string configuredPath)
@@ -95,6 +100,24 @@ public sealed class JsonBankBalanceReadRepository : IBankBalanceReadRepository
         }
 
         throw new InvalidDataException($"Record {id} is missing required field '{fieldName}'.");
+    }
+
+    private static void ValidateBalances(IReadOnlyCollection<BankBalance> balances)
+    {
+        var duplicateId = balances
+            .GroupBy(balance => balance.Id)
+            .FirstOrDefault(group => group.Count() > 1);
+
+        if (duplicateId is not null)
+        {
+            throw new InvalidDataException($"Demo data contains duplicate id '{duplicateId.Key}'.");
+        }
+
+        var invalidId = balances.FirstOrDefault(balance => balance.Id <= 0);
+        if (invalidId is not null)
+        {
+            throw new InvalidDataException($"Record {invalidId.Id} has an invalid id. Id must be positive.");
+        }
     }
 
     private sealed record JsonBankBalanceRecord(
