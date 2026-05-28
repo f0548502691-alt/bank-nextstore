@@ -463,7 +463,8 @@ docker compose up --build
 
 ### ולידציות ושגיאות
 
-- ולידציית query parameters מתבצעת ב-API Controller: טווח סכומים, `page`, `pageSize`, `sortBy`, `sortDirection`.
+- ולידציית query parameters מתבצעת בשכבת Application באמצעות FluentValidation ו-MediatR pipeline behavior: טווח סכומים, `page`, `pageSize`, `sortBy`, `sortDirection`.
+- ה-API Controller נשאר דק ומתרגם HTTP request ל-query בלבד.
 - ולידציית מבנה JSON מתבצעת ב-`JsonBankBalanceReadRepository`: שדות חובה, פורמט תאריך, id חיובי וזיהוי כפילויות id.
 - שגיאות שרת מוחזרות כ-ProblemDetails עם `traceId`.
 - בצד הלקוח קיים HTTP interceptor שמרכז טיפול בשגיאות API ומייצר הודעה ידידותית למשתמש.
@@ -528,3 +529,4 @@ docker compose up --build
 | 2026-05-28 | הוספת Docker ותיעוד החלטות הרחבה | תמיכה בהרצה מלאה עם Docker Compose והבהרת concurrency, factory, שימוש בפיצ'רים חדשים והפרדה בין שכבות |
 | 2026-05-28 | הוספת pagination בצד שרת ובמסך | הכנת חוזה ה-API וה-UI לכמויות נתונים גדולות והפחתת עומס רינדור/רשת |
 | 2026-05-28 | הוספת sorting, ולידציות JSON, interceptor ולוגים אחידים | חיזוק חוויית תפעול ופיתוח תוך שמירה על מקור נתונים JSON בשלב הדמו |
+| 2026-05-28 | מעבר ל-FluentValidation עבור query validation | ריכוז חוקי ולידציה בשכבת Application ושמירה על Controller דק |

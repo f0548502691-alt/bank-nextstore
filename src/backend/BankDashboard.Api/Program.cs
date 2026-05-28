@@ -1,5 +1,6 @@
 using BankDashboard.Application;
 using BankDashboard.Infrastructure;
+using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
@@ -48,6 +49,31 @@ app.UseExceptionHandler(exceptionHandlerApp =>
         var exceptionFeature = context.Features.Get<IExceptionHandlerPathFeature>();
         var exception = exceptionFeature?.Error;
         var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+
+        if (exception is ValidationException validationException)
+        {
+            logger.LogWarning(
+                validationException,
+                "Request validation failed while processing {Path}",
+                context.Request.Path);
+
+            var validationProblemDetails = new ValidationProblemDetails(
+                validationException.Errors
+                    .GroupBy(error => error.PropertyName)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => group.Select(error => error.ErrorMessage).ToArray()))
+            {
+                Title = "One or more validation errors occurred.",
+                Status = StatusCodes.Status400BadRequest,
+                Instance = context.Request.Path
+            };
+            validationProblemDetails.Extensions["traceId"] = context.TraceIdentifier;
+
+            context.Response.StatusCode = StatusCodes.Status400BadRequest;
+            await context.Response.WriteAsJsonAsync(validationProblemDetails);
+            return;
+        }
 
         logger.LogError(exception, "Unhandled exception while processing {Path}", context.Request.Path);
 
